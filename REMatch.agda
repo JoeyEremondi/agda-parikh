@@ -28,8 +28,8 @@ data RE : Nullable? -> Set where
 
 mutual
 
-  starMatch : RE NonNull -> List Char -> List Char -> (List Char -> Bool) -> Bool
-  starMatch r s₁ s₂ k = (acc r s₁ k ) ∧ (acc (r *) s₂ k) 
+--  starMatch : RE NonNull -> List Char -> List Char -> (List Char -> Bool) -> Bool
+--  starMatch r s₁ s₂ k = (acc r s₁ k ) ∧ (acc (r *) s₂ k) 
 
   acc : {n : Nullable? } -> RE n -> List Char -> (List Char -> Bool) -> Bool
   acc ε s k = k s
@@ -39,4 +39,5 @@ mutual
   acc (r₁ + r₂) s k = (acc r₁ s k) ∨ (acc r₂ s k)
   acc (r₁ · r₂) s k = acc r₁ s (λ s' -> acc r₂ s' k)
   acc (r *) [] k = (k [])  
-  acc (r *) (sFirst ∷ sRest) k =  starMatch r (sFirst ∷ [] ) sRest k
+  acc (r *) cs k = k cs ∨ acc r cs (\cs' -> acc r cs' k)
+  --acc (r *) (sFirst ∷ sRest) k =  starMatch r (sFirst ∷ [] ) sRest k
