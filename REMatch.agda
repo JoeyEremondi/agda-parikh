@@ -92,7 +92,9 @@ orLemma2 {false} {false} ()
 
 
 accCorrect : 
-  (r : RE) (s : List Char) (s1 : List Char) (s2 : List Char) (k : (List Char -> Bool)) 
+  (r : RE) 
+  (s : List Char) (s1 : List Char) (s2 : List Char) 
+  (k : (List Char -> Bool)) 
   -> ( (s1 ++ s2) ≡ s)
   -> (REMatch s1 r)
   -> (k s2 ≡ true)
@@ -102,13 +104,9 @@ accCorrect ε  [] ._ []  k _ EmptyMatch kproof = kproof
 --accCorrect (r1 + r2) s s1 s2 k splitProof _ kproof = {!!}  
 --accCorrect {_ · _}{s}{s1}{s2}{k} 
 accCorrect (.r1 · .r2 ) s ._ s2  k  splitProof (ConcatMatch {s1'} {s2'} {r1} {r2} subMatch1 subMatch2) kproof  = 
-  let
-    newK = (λ s' → acc r2 s' k)
-    newKproof : (newK s2 ≡ true)
-    newKproof = {!!}
-    subCorrect2 = {!!} -- accCorrect r2 s2 ? ? ? subMatch2 ?
-    subCorrect1 = accCorrect r1 (s1' ++ s2' ) s1' s2' (λ s' -> acc r2 s' k) refl subMatch1 subCorrect2
-  in {!-t 100!}
+  accCorrect r1 _ s1' (s2' ++ s2) (\cs -> acc r2 cs k) {!!} 
+    subMatch1 
+    (accCorrect r2 (s2' ++ s2) s2' s2 k refl subMatch2 kproof)
 accCorrect (.r1 + .r2 ) s .s1 s2  k  
   splitProof (LeftPlusMatch {s1} {r1} {r2} subMatch) kproof  = 
    orLemma1 (accCorrect r1 s s1 s2 k splitProof subMatch kproof )
