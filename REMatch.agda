@@ -2,7 +2,7 @@ module REMatch where
 
 open import Data.Char
 import Data.Nat
-open import Data.List
+--open import Data.List
 open import Data.Bool
 
 open import Data.Product
@@ -10,38 +10,40 @@ open import Data.Product
 import Algebra
 import Algebra.FunctionProperties
 
-open import Relation.Binary.PropositionalEquality as PropEq
-  using (_≡_; refl; cong; trans; sym)
+open import Relation.Binary.PropositionalEquality
+open import Data.List
+open import Data.List.Properties
 
 open import Data.Sum
 
-{-
-data Nullable? : Set where
-  Nullable : Nullable?
-  NonNull : Nullable?
+open List-solver renaming (nil to :[]; _⊕_ to _:++_; _⊜_ to _:≡_; solve to listSolve; prove to listProve)
 
 
-nullTop : Nullable? -> Nullable? -> Nullable?
-nullTop Nullable Nullable = Nullable
+data Null? : Set where
+  NonNull : Null?
+  MaybeNull : Null?
+
+nullTop : Null? -> Null? -> Null?
+nullTop MaybeNull MaybeNull = MaybeNull
 nullTop _ _ = NonNull
 
-nullBottom : Nullable? -> Nullable? -> Nullable?
+nullBottom : Null? -> Null? -> Null?
 nullBottom NonNull NonNull = NonNull
-nullBottom _ _ = Nullable
--}
+nullBottom _ _ = MaybeNull
 
 
 
-data RE :  Set where
-  ε : RE 
-  ∅ : RE 
-  Lit : Char -> RE 
-  _+_ : RE -> RE -> RE
-  _·_ :  RE -> RE -> RE
-  _* : RE -> RE
+
+data RE : Null? -> Set where
+  ε : RE MaybeNull
+  ∅ : RE NonNull 
+  Lit : Char -> RE NonNull 
+  _+_ : {n1 : Null? } -> {n2 : Null?} -> RE n1 -> RE n2 -> RE (nullBottom n1 n2)
+  _·_ :  {n1 : Null? } -> {n2 : Null?} -> RE n1 -> RE n2 -> RE (nullTop n1 n2)
+  _* : RE NonNull -> RE MaybeNull
   
 
-acc :  RE -> List Char -> (List Char -> Bool) -> Bool
+acc :  {n : Null?} -> RE n -> List Char -> (List Char -> Bool) -> Bool
 acc ε s k = k s
 acc ∅ _ _ = false
 acc (Lit _) [] _ = false
@@ -52,28 +54,28 @@ acc (r *) [] k = (k [])
 acc (r *) cs k = k cs ∨ acc r cs (\cs' -> acc r cs' k)
   --acc (r *) (sFirst ∷ sRest) k =  starMatch r (sFirst ∷ [] ) sRest k
 
-accept : RE -> List Char -> Bool
+accept : {n : Null?} -> RE n -> List Char -> Bool
 accept r s = acc r s null
 
-data REMatch : List Char -> RE -> Set where
+data REMatch : {n : Null?} -> List Char -> RE n -> Set where
   EmptyMatch : REMatch [] ε
   LitMatch : (c : Char) -> REMatch (c ∷ []) (Lit c)
   LeftPlusMatch : 
-    {s : List Char} {r1 : RE} {r2 : RE} 
+    {n1 : Null?} {n2 : Null?} {s : List Char} {r1 : RE n1} {r2 : RE n2} 
     -> REMatch s r1 
     -> REMatch s (r1 + r2)  
   RightPlusMatch : 
-    {s : List Char} {r1 : RE} {r2 : RE} 
+    {n1 : Null?} {n2 : Null?} {s : List Char} {r1 : RE n1} {r2 : RE n2} 
     -> REMatch s r2 
     -> REMatch s (r1 + r2)
   ConcatMatch : 
-    {s1 : List Char} {s2 : List Char} {r1 : RE} {r2 : RE}
+    {n1 : Null?} {n2 : Null?} {s1 : List Char} {s2 : List Char} {r1 : RE n1} {r2 : RE n2}
     -> REMatch s1 r1
     -> REMatch s2 r2
     -> REMatch (s1 ++ s2) (r1 · r2)
-  EmptyStarMatch : {r : RE} -> REMatch [] (r *)
+  EmptyStarMatch : {r : RE NonNull} -> REMatch [] (r *)
   StarMatch : 
-    {s1 : List Char} {s2 : List Char } {r : RE}
+    {s1 : List Char} {s2 : List Char } {r : RE NonNull}
     -> REMatch s1 r
     -> REMatch s2 (r *)
     -> REMatch (s1 ++ s2) (r *)
@@ -101,7 +103,8 @@ orCases {true} y = inj₁ refl
 orCases {false} y = inj₂ y
 
 accCorrect : 
-  (r : RE) 
+  {n : Null? }
+  (r : RE n) 
   (s : List Char) (s1 : List Char) (s2 : List Char) 
   (k : (List Char -> Bool)) 
   -> ( (s1 ++ s2) ≡ s)
@@ -110,9 +113,19 @@ accCorrect :
   -> (acc r s k ≡ true )
 --accCorrect ∅ [] [] [] k _ () kproof 
 accCorrect ε  [] ._ []  k _ EmptyMatch kproof = kproof
+{-
+accCorrect (Lit .c) (c1 ∷ srest ) (.c ∷ []) s2 k _ (LitMatch c) kproof =
+  let
+    s2eq : srest ≡ s2
+    s2eq = {!!} -- cong (λ x → {!x ∷!}) {!!}
+  in 
+    if 
+      (c == c1)
+    then {!!}
+    else {!!} -}
 --accCorrect (r1 + r2) s s1 s2 k splitProof _ kproof = {!!}  
 --accCorrect {_ · _}{s}{s1}{s2}{k} 
-accCorrect (.r1 · .r2 ) s ._ s2  k  splitProof (ConcatMatch {s1'} {s2'} {r1} {r2} subMatch1 subMatch2) kproof  = 
+accCorrect (.r1 · .r2 ) s ._ s2  k  splitProof (ConcatMatch {_} {_} {s1'} {s2'} {r1} {r2} subMatch1 subMatch2) kproof  = 
   let
            s1 = s1' ++ s2'
            split1 : s1 ++ s2 ≡ s
@@ -127,14 +140,14 @@ accCorrect (.r1 · .r2 ) s ._ s2  k  splitProof (ConcatMatch {s1'} {s2'} {r1} {r
            --split4 : s1' ++ s2' ++ s2 ≡ s
            --split4 = trans split3 split1
            --assocThm = Algebra.Monoid.assoc Data.List.monoid
-  in accCorrect r1 s s1' (s2' ++ s2) (\cs -> acc r2 cs k) {!!}
+  in accCorrect r1 s s1' (s2' ++ s2) (\cs -> acc r2 cs k) {!!} --(listProve {!!} {!!}) {-(s1' :++ s2' :++ s2 :≡ s)-}
     subMatch1 
     (accCorrect r2 (s2' ++ s2) s2' s2 k refl subMatch2 kproof)
 accCorrect (.r1 + .r2 ) s .s1 s2  k  
-  splitProof (LeftPlusMatch {s1} {r1} {r2} subMatch) kproof  = 
+  splitProof (LeftPlusMatch {_} {_} {s1} {r1} {r2} subMatch) kproof  = 
    orLemma1 (accCorrect r1 s s1 s2 k splitProof subMatch kproof )
 accCorrect (.r1 + .r2) s .s1 s2  k  
-  splitProof (RightPlusMatch {s1} {r1} {r2} subMatch) kproof  =
+  splitProof (RightPlusMatch {_} {_} {s1} {r1} {r2} subMatch) kproof  =
     let subCorrect = accCorrect r2 s s1 s2 k splitProof subMatch kproof
     in orLemma2 {acc r1 s k} {acc r2 s k} subCorrect
 accCorrect (.r *) [] ._ [] k _ (EmptyStarMatch {r}) kproof = kproof
@@ -150,22 +163,31 @@ accCorrect (r *) (sh ∷ st) [] s2 k sp1 _ kproof =
     orProof : (k s ∨ acc r s (\cs' -> acc (r) cs' k)) ≡ true
     orProof = orLemma1 kproof3
   in orProof
-
-
 accCorrect _ _ _ _ _ _ _ _ = {!!}
+
+
 
 boolExclMiddle : {x : Bool} { y : Bool } -> (x ∨ y ≡ true ) -> (x ≡ false) -> (y ≡ true)
 boolExclMiddle {true} p1 () 
 boolExclMiddle {false} p1 p2 = p1 
 
 
-accComplete : 
-  (r : RE) 
+accComplete :
+  {n : Null?}
+  (r : RE n) 
   (s : List Char)
   (k : (List Char -> Bool))
   -> (acc r s k ≡ true)
-  -> ∃ (λ s1 -> ∃ (λ s2 -> (s1 ++ s2 ≡ s) × ( k s2 ≡ true) × (REMatch s1 r ) ) ) --List Char, (s1 ++ s2) ≡ s, (REMatch s1 r), (k s2 ≡ true))
+  -> ∃ (λ s1 -> ∃ (λ s2 -> (s1 ++ s2 ≡ s) × ( k s2 ≡ true) × (REMatch s1 r ) ) ) 
 accComplete ε [] k pf =  [] , [] , refl , pf , EmptyMatch
+accComplete ε s k pf = [] , s , refl , pf , EmptyMatch
+accComplete (Lit c) (c1 ∷ srest) k accProof = 
+  let
+    charsEqual : c ≡ c1
+    charsEqual = {!!}
+    kRestTrue : k srest ≡ true
+    kRestTrue = {!!}
+  in  c ∷ [] , srest , cong (λ x → x ∷ srest) charsEqual , kRestTrue , LitMatch c
 accComplete (r1 · r2) s k pf = {!!} , {!!} , {!!} , {!!} , {!!}
 accComplete (r1 + r2) s k accProof with (orCases accProof)
 ...  | inj₁ leftTrue  = 
@@ -175,7 +197,13 @@ accComplete (r1 + r2) s k accProof with (orCases accProof)
 ...  | inj₂ rightTrue  = let
     s1 , s2 , p1 , p2 , match = accComplete r2 s k rightTrue
   in s1 , s2 , p1 , p2 , RightPlusMatch match
-accComplete _ _ _ _ = {!!}  
+accComplete (r *) [] k pf =  [] , [] , refl , pf , EmptyStarMatch
+accComplete (r *) s k accProof with (orCases accProof)
+... | inj₁ leftTrue  =  [] , s , refl , leftTrue , EmptyStarMatch
+... | inj₂ rightTrue  =  {!!} , {!!} , {!!} , {!!} , {!!}
+accComplete ∅ _ _ ()
+accComplete (Lit _) [] _ ()
+--accComplete _ _ _ _ = {!!}  
 
 
 {-
