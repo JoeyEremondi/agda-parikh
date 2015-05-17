@@ -178,9 +178,10 @@ accCorrect (r *) (sh ∷ st) [] s2 k sp1 _ kproof =
     kproof2 = cong k (sym sp1)
     kproof3 : k s ≡ true
     kproof3 = trans kproof2 kproof
-    orProof : (k s ∨ acc r s (\cs' -> acc (r) cs' k)) ≡ true
+    orProof : (k s ∨ starMatch r [] s k) ≡ true
     orProof = orLemma1 kproof3
   in orProof
+--accCorrect  (.r *) s ._ s2 k sp1 (StarMatch {s1'} {s1''} {r} sub1 sub2) kproof = ?
 accCorrect _ _ _ _ _ _ _ _ = {!!}
 
 
@@ -206,7 +207,16 @@ accComplete (Lit c) (c1 ∷ srest) k accProof =
     kRestTrue : k srest ≡ true
     kRestTrue = {!!}
   in  c ∷ [] , srest , cong (λ x → x ∷ srest) charsEqual , kRestTrue , LitMatch c
-accComplete (r1 · r2) s k pf = {!!} , {!!} , {!!} , {!!} , {!!}
+accComplete (r1 · r2) s k pf = 
+  let
+    sub1 : acc r1 s (λ s' -> acc r2 s' k) ≡ true
+    sub1 = pf
+    s11 , s2' , psub1 , psub2 , match1  = accComplete r1 s (λ s' -> acc r2 s' k) pf
+    s12 , s2 , p1 , p2 , match2 = accComplete r2 s2' k psub2
+    stringProof : (s11 ++ s12) ++ s2 ≡ s
+    stringProof = {!!}
+  in (s11 ++ s12 ) , s2 , stringProof , p2 , (ConcatMatch match1 match2)
+  
 accComplete (r1 + r2) s k accProof with (orCases accProof)
 ...  | inj₁ leftTrue  = 
   let
