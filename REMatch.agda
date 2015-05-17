@@ -13,6 +13,8 @@ import Algebra.FunctionProperties
 open import Relation.Binary.PropositionalEquality as PropEq
   using (_≡_; refl; cong; trans; sym)
 
+open import Data.Sum
+
 {-
 data Nullable? : Set where
   Nullable : Nullable?
@@ -27,6 +29,8 @@ nullBottom : Nullable? -> Nullable? -> Nullable?
 nullBottom NonNull NonNull = NonNull
 nullBottom _ _ = Nullable
 -}
+
+
 
 data RE :  Set where
   ε : RE 
@@ -92,6 +96,9 @@ orLemma2 {false} {true} pf = refl
 orLemma2 {true} {false} pf = refl
 orLemma2 {false} {false} ()
 
+orCases : {x : Bool} {y : Bool} -> (x ∨ y ≡ true) -> (x ≡ true) ⊎ (y ≡ true)
+orCases {true} y = inj₁ refl
+orCases {false} y = inj₂ y
 
 accCorrect : 
   (r : RE) 
@@ -147,15 +154,28 @@ accCorrect (r *) (sh ∷ st) [] s2 k sp1 _ kproof =
 
 accCorrect _ _ _ _ _ _ _ _ = {!!}
 
+boolExclMiddle : {x : Bool} { y : Bool } -> (x ∨ y ≡ true ) -> (x ≡ false) -> (y ≡ true)
+boolExclMiddle {true} p1 () 
+boolExclMiddle {false} p1 p2 = p1 
+
+
 accComplete : 
   (r : RE) 
   (s : List Char)
   (k : (List Char -> Bool))
   -> (acc r s k ≡ true)
   -> ∃ (λ s1 -> ∃ (λ s2 -> (s1 ++ s2 ≡ s) × ( k s2 ≡ true) × (REMatch s1 r ) ) ) --List Char, (s1 ++ s2) ≡ s, (REMatch s1 r), (k s2 ≡ true))
-accComplete ε [] k pf =  [] , [] , refl , pf , EmptyMatch 
-accComplete _ _ _ _ = {!!}
-  
+accComplete ε [] k pf =  [] , [] , refl , pf , EmptyMatch
+accComplete (r1 · r2) s k pf = {!!} , {!!} , {!!} , {!!} , {!!}
+accComplete (r1 + r2) s k accProof with (orCases accProof)
+...  | inj₁ leftTrue  = 
+  let
+    s1 , s2 , p1 , p2 , match = accComplete r1 s k leftTrue
+  in s1 , s2 , p1 , p2 , LeftPlusMatch match
+...  | inj₂ rightTrue  = let
+    s1 , s2 , p1 , p2 , match = accComplete r2 s k rightTrue
+  in s1 , s2 , p1 , p2 , RightPlusMatch match
+accComplete _ _ _ _ = {!!}  
 
 
 {-
