@@ -7,9 +7,11 @@ open import Data.Bool
 
 open import Data.Product
 
+import Algebra
+import Algebra.FunctionProperties
 
 open import Relation.Binary.PropositionalEquality as PropEq
-  using (_≡_; refl)
+  using (_≡_; refl; cong; trans; sym)
 
 {-
 data Nullable? : Set where
@@ -104,7 +106,21 @@ accCorrect ε  [] ._ []  k _ EmptyMatch kproof = kproof
 --accCorrect (r1 + r2) s s1 s2 k splitProof _ kproof = {!!}  
 --accCorrect {_ · _}{s}{s1}{s2}{k} 
 accCorrect (.r1 · .r2 ) s ._ s2  k  splitProof (ConcatMatch {s1'} {s2'} {r1} {r2} subMatch1 subMatch2) kproof  = 
-  accCorrect r1 _ s1' (s2' ++ s2) (\cs -> acc r2 cs k) {!!} 
+  let
+           s1 = s1' ++ s2'
+           split1 : s1 ++ s2 ≡ s
+           split1 = splitProof
+           split2 : (s1' ++ s2') ≡ s1 
+           split2 = refl
+           split3 : (s1' ++ s2') ++ s2 ≡ s1 ++ s2
+           split3 = cong (λ x -> x ++ s2) split2
+           split4 : (s1' ++ s2') ++ s2 ≡ s1' ++ s2' ++ s2
+           split4 = {!!}
+           --split4 = ? 
+           --split4 : s1' ++ s2' ++ s2 ≡ s
+           --split4 = trans split3 split1
+           --assocThm = Algebra.Monoid.assoc Data.List.monoid
+  in accCorrect r1 s s1' (s2' ++ s2) (\cs -> acc r2 cs k) {!!}
     subMatch1 
     (accCorrect r2 (s2' ++ s2) s2' s2 k refl subMatch2 kproof)
 accCorrect (.r1 + .r2 ) s .s1 s2  k  
@@ -114,9 +130,33 @@ accCorrect (.r1 + .r2) s .s1 s2  k
   splitProof (RightPlusMatch {s1} {r1} {r2} subMatch) kproof  =
     let subCorrect = accCorrect r2 s s1 s2 k splitProof subMatch kproof
     in orLemma2 {acc r1 s k} {acc r2 s k} subCorrect
---accCorrect (.r *) [] [] [] k _ (EmptyStarMatch {r}) kproof = kproof
-accCorrect (.r *) s ._ s2 k _ (StarMatch {s1'} {s1''} {r} sub1 sub2) kproof = {!!}
+accCorrect (.r *) [] ._ [] k _ (EmptyStarMatch {r}) kproof = kproof
+accCorrect (r *) (sh ∷ st) [] s2 k sp1 _ kproof = 
+  let
+    s = sh ∷ st
+    sp2 : s2 ≡ s
+    sp2 = sp1
+    kproof2 : k s ≡ k s2
+    kproof2 = cong k (sym sp1)
+    kproof3 : k s ≡ true
+    kproof3 = trans kproof2 kproof
+    orProof : (k s ∨ acc r s (\cs' -> acc (r) cs' k)) ≡ true
+    orProof = orLemma1 kproof3
+  in orProof
+
+
 accCorrect _ _ _ _ _ _ _ _ = {!!}
+
+accComplete : 
+  (r : RE) 
+  (s : List Char)
+  (k : (List Char -> Bool))
+  -> (acc r s k ≡ true)
+  -> ∃ (λ s1 -> ∃ (λ s2 -> (s1 ++ s2 ≡ s) × ( k s2 ≡ true) × (REMatch s1 r ) ) ) --List Char, (s1 ++ s2) ≡ s, (REMatch s1 r), (k s2 ≡ true))
+accComplete ε [] k pf =  [] , [] , refl , pf , EmptyMatch 
+accComplete _ _ _ _ = {!!}
+  
+
 
 {-
 matchCorrect : (s : List Char) (r : RE) -> ((accept r s) ≡ true) -> REMatch s r
