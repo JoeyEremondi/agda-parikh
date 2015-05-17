@@ -10,7 +10,10 @@ open import Data.Product
 import Algebra
 import Algebra.FunctionProperties
 
+open import Relation.Nullary
+open import Relation.Binary
 open import Relation.Binary.PropositionalEquality
+
 open import Data.List
 open import Data.List.Properties
 
@@ -61,7 +64,9 @@ mutual
   acc ε s k = k s
   acc ∅ _ _ = false
   acc (Lit _) [] _ = false
-  acc (Lit c) (sFirst ∷ sRest) k = (c == sFirst) ∧ (k sRest) 
+  acc (Lit c) (sFirst ∷ sRest) k with (c Data.Char.≟ sFirst)
+  ... | yes pf  = (k sRest)
+  ... | no _  = false
   acc (r₁ + r₂) s k = (acc r₁ s k) ∨ (acc r₂ s k)
   acc (r₁ · r₂) s k = acc r₁ s (λ s' -> acc r₂ s' k)
   acc (r *) [] k = (k [])  
@@ -145,14 +150,8 @@ accCorrect :
 accCorrect ε  [] ._ []  k _ EmptyMatch kproof = kproof
 accCorrect (Lit .c) (c1 ∷ srest ) (.c ∷ []) s2 k _ (LitMatch c) kproof =
   let
-    charEq : (c == c1) ≡ true 
-    charEq = {!!}
-    s2Eq : srest ≡ s2
-    s2Eq = {!!}
-    s2KProof : (k srest) ≡ k s2
-    s2KProof = cong k s2Eq
-
-  in andCombine charEq (trans s2KProof kproof) 
+    x = {!!}
+  in {!!} 
 accCorrect (.r1 · .r2 ) s ._ s2  k  splitProof (ConcatMatch {_} {_} {s1'} {s2'} {r1} {r2} subMatch1 subMatch2) kproof  = 
   let
            s1 = s1' ++ s2'
@@ -197,14 +196,15 @@ accCorrect ∅ _ _ _ _ _ ()
 accCorrect ε (_ ∷ _ ) _ _ _ () _
 accCorrect _ [] (_ ∷ _ ) _ _ () _ _
 accCorrect _ [] _ (_ ∷ _ ) _ () _ _
-accCorrect (Lit _) [] _ _ _ () _
+accCorrect (Lit _) [] _ _ _ () _ _
 accCorrect _ _ _ _ _ _ _ _ = {!!}
 
 
 
 boolExclMiddle : {x : Bool} { y : Bool } -> (x ∨ y ≡ true ) -> (x ≡ false) -> (y ≡ true)
 boolExclMiddle {true} p1 () 
-boolExclMiddle {false} p1 p2 = p1 
+boolExclMiddle {false} p1 p2 = p1
+
 
 
 accComplete :
@@ -216,21 +216,26 @@ accComplete :
   -> ∃ (λ s1 -> ∃ (λ s2 -> (s1 ++ s2 ≡ s) × ( k s2 ≡ true) × (REMatch s1 r ) ) ) 
 accComplete ε [] k pf =  [] , [] , refl , pf , EmptyMatch
 accComplete ε s k pf = [] , s , refl , pf , EmptyMatch
-accComplete (Lit c) (c1 ∷ srest) k accProof = 
-  let
-    charsEqual : c ≡ c1
-    charsEqual = {!!}
-    kRestTrue : k srest ≡ true
-    kRestTrue = {!!}
-  in  c ∷ [] , srest , cong (λ x → x ∷ srest) charsEqual , kRestTrue , LitMatch c
+accComplete (Lit c) (c1 ∷ srest) k accProof with (c Data.Char.≟ c1)
+...| yes eqProof =  
+    let
+      charsEqual : c ≡ c1
+      charsEqual = eqProof
+    in  Data.List.[ c ] , srest , cong (λ x → x ∷ srest) charsEqual , accProof , LitMatch c
+accComplete (Lit c) (c1 ∷ srest) k () | no _
 accComplete (r1 · r2) s k pf = 
   let
     sub1 : acc r1 s (λ s' -> acc r2 s' k) ≡ true
     sub1 = pf
     s11 , s2' , psub1 , psub2 , match1  = accComplete r1 s (λ s' -> acc r2 s' k) pf
     s12 , s2 , p1 , p2 , match2 = accComplete r2 s2' k psub2
-    stringProof : (s11 ++ s12) ++ s2 ≡ s
-    stringProof = {!!}
+    localAssoc :  s11 ++ (s12 ++ s2) ≡ (s11 ++ s12) ++ s2
+    localAssoc = {!!}
+    subProof1 : s11 ++ s2' ≡ s11 ++ (s12 ++ s2)
+    subProof1 = sym ( cong (λ x -> s11 ++ x) p1 )
+    subProof2 : s11 ++ s2' ≡ (s11 ++ s12) ++ s2 
+    subProof2 = trans subProof1 localAssoc
+    stringProof = trans (sym subProof2) psub1
   in (s11 ++ s12 ) , s2 , stringProof , p2 , (ConcatMatch match1 match2)
   
 accComplete (r1 + r2) s k accProof with (orCases accProof)
