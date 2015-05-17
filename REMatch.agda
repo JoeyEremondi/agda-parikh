@@ -41,18 +41,36 @@ data RE : Null? -> Set where
   _+_ : {n1 : Null? } -> {n2 : Null?} -> RE n1 -> RE n2 -> RE (nullBottom n1 n2)
   _·_ :  {n1 : Null? } -> {n2 : Null?} -> RE n1 -> RE n2 -> RE (nullTop n1 n2)
   _* : RE NonNull -> RE MaybeNull
-  
 
-acc :  {n : Null?} -> RE n -> List Char -> (List Char -> Bool) -> Bool
-acc ε s k = k s
-acc ∅ _ _ = false
-acc (Lit _) [] _ = false
-acc (Lit c) (sFirst ∷ sRest) k = if (c == sFirst) then (k sRest) else false 
-acc (r₁ + r₂) s k = (acc r₁ s k) ∨ (acc r₂ s k)
-acc (r₁ · r₂) s k = acc r₁ s (λ s' -> acc r₂ s' k)
-acc (r *) [] k = (k [])  
-acc (r *) cs k = k cs ∨ acc r cs (\cs' -> acc r cs' k)
-  --acc (r *) (sFirst ∷ sRest) k =  starMatch r (sFirst ∷ [] ) sRest k
+listDivisions : List Char -> List (List Char × List Char)
+listDivisions [] = ( [] , []) ∷ []
+listDivisions (h ∷ t) = ([] , h ∷ t ) ∷ (Data.List.map (λ p -> ( (h ∷ proj₁ p) , proj₂ p )) (listDivisions t) ) 
+  
+elementMatches : {A : Set} (f : A -> Bool) -> List A -> Bool
+elementMatches f [] = false
+elementMatches f (h ∷ t) = (f h) ∨ elementMatches f t
+
+mutual
+
+  starMatch : {n : Null?} -> (RE n) -> List Char -> List Char -> (List Char -> Bool) -> Bool
+  starMatch (r *) s1 (sh ∷ st) k =  (acc r (s1 ++ Data.List.[ sh ]) null ∧ acc ( r *) st k )  ∨ starMatch (r *) (s1 ++ Data.List.[ sh ]) st k
+  starMatch (r *) s1 [] k = false
+  starMatch _ _ _ _ = false
+
+  acc :  {n : Null?} -> RE n -> List Char -> (List Char -> Bool) -> Bool
+  acc ε s k = k s
+  acc ∅ _ _ = false
+  acc (Lit _) [] _ = false
+  acc (Lit c) (sFirst ∷ sRest) k = if (c == sFirst) then (k sRest) else false 
+  acc (r₁ + r₂) s k = (acc r₁ s k) ∨ (acc r₂ s k)
+  acc (r₁ · r₂) s k = acc r₁ s (λ s' -> acc r₂ s' k)
+  acc (r *) [] k = (k [])  
+  acc (r *) (ch ∷ ct) k = 
+    let
+      cs = ch ∷ ct
+    in k cs ∨ starMatch r [] cs k
+    --acc r cs (\cs' -> acc (r) cs' k)
+    --acc (r *) (sFirst ∷ sRest) k =  starMatch r (sFirst ∷ [] ) sRest k
 
 accept : {n : Null?} -> RE n -> List Char -> Bool
 accept r s = acc r s null
@@ -198,8 +216,8 @@ accComplete (r1 + r2) s k accProof with (orCases accProof)
     s1 , s2 , p1 , p2 , match = accComplete r2 s k rightTrue
   in s1 , s2 , p1 , p2 , RightPlusMatch match
 accComplete (r *) [] k pf =  [] , [] , refl , pf , EmptyStarMatch
-accComplete (r *) s k accProof with (orCases accProof)
-... | inj₁ leftTrue  =  [] , s , refl , leftTrue , EmptyStarMatch
+accComplete (r *) (sh ∷ st) k accProof with (orCases accProof)
+... | inj₁ leftTrue  =  [] , (sh ∷ st) , refl , leftTrue , EmptyStarMatch
 ... | inj₂ rightTrue  =  {!!} , {!!} , {!!} , {!!} , {!!}
 accComplete ∅ _ _ ()
 accComplete (Lit _) [] _ ()
