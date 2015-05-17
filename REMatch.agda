@@ -61,7 +61,7 @@ mutual
   acc ε s k = k s
   acc ∅ _ _ = false
   acc (Lit _) [] _ = false
-  acc (Lit c) (sFirst ∷ sRest) k = if (c == sFirst) then (k sRest) else false 
+  acc (Lit c) (sFirst ∷ sRest) k = (c == sFirst) ∧ (k sRest) 
   acc (r₁ + r₂) s k = (acc r₁ s k) ∨ (acc r₂ s k)
   acc (r₁ · r₂) s k = acc r₁ s (λ s' -> acc r₂ s' k)
   acc (r *) [] k = (k [])  
@@ -102,6 +102,18 @@ orLemma1 : {x : Bool} {y : Bool} -> (y ≡ true) -> (y ∨ x) ≡ true
 orLemma1 {x} {true} pf = refl
 orLemma1 {x} {false} ()
 
+andElim1 : {x : Bool} {y : Bool} -> (x ∧ y) ≡ true -> (x ≡ true)
+andElim1 {true} pf = refl
+andElim1 {false} ()
+
+andElim2 : {x : Bool} {y : Bool} -> (x ∧ y) ≡ true -> (y ≡ true)
+andElim2 {y = true} pf = refl
+andElim2 {y = false} () 
+
+andCombine : {x : Bool} {y : Bool} -> x ≡ true -> y ≡ true -> (x ∧ y) ≡ true
+andCombine {true} pfx pfy = pfy
+andCombine {false} ()
+
 {-
 orCommut : {x : Bool} {y : Bool} -> (y ∨ x) ≡ (x ∨ y)
 orCommut {true} {true} = refl
@@ -131,18 +143,16 @@ accCorrect :
   -> (acc r s k ≡ true )
 --accCorrect ∅ [] [] [] k _ () kproof 
 accCorrect ε  [] ._ []  k _ EmptyMatch kproof = kproof
-{-
 accCorrect (Lit .c) (c1 ∷ srest ) (.c ∷ []) s2 k _ (LitMatch c) kproof =
   let
-    s2eq : srest ≡ s2
-    s2eq = {!!} -- cong (λ x → {!x ∷!}) {!!}
-  in 
-    if 
-      (c == c1)
-    then {!!}
-    else {!!} -}
---accCorrect (r1 + r2) s s1 s2 k splitProof _ kproof = {!!}  
---accCorrect {_ · _}{s}{s1}{s2}{k} 
+    charEq : (c == c1) ≡ true 
+    charEq = {!!}
+    s2Eq : srest ≡ s2
+    s2Eq = {!!}
+    s2KProof : (k srest) ≡ k s2
+    s2KProof = cong k s2Eq
+
+  in andCombine charEq (trans s2KProof kproof) 
 accCorrect (.r1 · .r2 ) s ._ s2  k  splitProof (ConcatMatch {_} {_} {s1'} {s2'} {r1} {r2} subMatch1 subMatch2) kproof  = 
   let
            s1 = s1' ++ s2'
@@ -169,6 +179,7 @@ accCorrect (.r1 + .r2) s .s1 s2  k
     let subCorrect = accCorrect r2 s s1 s2 k splitProof subMatch kproof
     in orLemma2 {acc r1 s k} {acc r2 s k} subCorrect
 accCorrect (.r *) [] ._ [] k _ (EmptyStarMatch {r}) kproof = kproof
+
 accCorrect (r *) (sh ∷ st) [] s2 k sp1 _ kproof = 
   let
     s = sh ∷ st
@@ -182,6 +193,11 @@ accCorrect (r *) (sh ∷ st) [] s2 k sp1 _ kproof =
     orProof = orLemma1 kproof3
   in orProof
 --accCorrect  (.r *) s ._ s2 k sp1 (StarMatch {s1'} {s1''} {r} sub1 sub2) kproof = ?
+accCorrect ∅ _ _ _ _ _ ()
+accCorrect ε (_ ∷ _ ) _ _ _ () _
+accCorrect _ [] (_ ∷ _ ) _ _ () _ _
+accCorrect _ [] _ (_ ∷ _ ) _ () _ _
+accCorrect (Lit _) [] _ _ _ () _
 accCorrect _ _ _ _ _ _ _ _ = {!!}
 
 
