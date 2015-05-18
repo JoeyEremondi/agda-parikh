@@ -19,8 +19,12 @@ open import Data.List.Properties
 
 open import Data.Sum
 
+open import Data.List.NonEmpty
+
 open List-solver renaming (nil to :[]; _⊕_ to _:++_; _⊜_ to _:≡_; solve to listSolve; prove to listProve)
 
+open import Algebra
+import Algebra.FunctionProperties as FunProp
 
 data Null? : Set where
   NonNull : Null?
@@ -137,6 +141,22 @@ orCases : {x : Bool} {y : Bool} -> (x ∨ y ≡ true) -> (x ≡ true) ⊎ (y ≡
 orCases {true} y = inj₁ refl
 orCases {false} y = inj₂ y
 
+listRightIdent : { x : List Char} -> x ++ [] ≡ x
+listRightIdent {[]} = refl
+listRightIdent {x ∷ x₁} = cong (_∷_ x) (listRightIdent {x₁})
+
+listAssoc : {x y z : List Char} -> (x ++ y) ++ z ≡ x ++ (y ++ z)
+listAssoc {[]} = λ {y} {z} → refl
+listAssoc {xh ∷ xt} {y} {z} = cong (_∷_ xh) (listAssoc {xt} {y} {z})
+
+
+{-
+sameHead : {a : Char}{b : Char}{l1 : List Char}{l2 : List Char} -> ((a ∷ l1) ≡ (b ∷ l2)) -> (a ≡ b)
+sameHead {l1 = []} {[]} pf1 = refl
+sameHead {l1 = []} {x ∷ l2} pf1 = {!!}
+sameHead {l1 = x ∷ l1} pf1 = {!!}
+-}
+
 accCorrect : 
   {n : Null? }
   (r : RE n) 
@@ -148,26 +168,24 @@ accCorrect :
   -> (acc r s k ≡ true )
 --accCorrect ∅ [] [] [] k _ () kproof 
 accCorrect ε  [] ._ []  k _ EmptyMatch kproof = kproof
-accCorrect (Lit .c) (c1 ∷ srest ) (.c ∷ []) s2 k _ (LitMatch c) kproof =
+accCorrect (Lit .c) (c1 ∷ srest ) (.c ∷ []) s2 k stringProof (LitMatch c) kproof =
   let
-    x = {!!}
+    
+    --sameNonEmpty = cong (\
+    sameHeads = {!!} -- cong Data.List.NonEmpty.head stringProof
   in {!!} 
-accCorrect (.r1 · .r2 ) s ._ s2  k  splitProof (ConcatMatch {_} {_} {s1'} {s2'} {r1} {r2} subMatch1 subMatch2) kproof  = 
+accCorrect (.r1 · .r2 ) s ._ s2  k  split1 (ConcatMatch {_} {_} {s1'} {s2'} {r1} {r2} subMatch1 subMatch2) kproof  = 
   let
            s1 = s1' ++ s2'
-           split1 : s1 ++ s2 ≡ s
-           split1 = splitProof
            split2 : (s1' ++ s2') ≡ s1 
            split2 = refl
            split3 : (s1' ++ s2') ++ s2 ≡ s1 ++ s2
            split3 = cong (λ x -> x ++ s2) split2
-           split4 : (s1' ++ s2') ++ s2 ≡ s1' ++ s2' ++ s2
-           split4 = {!!}
-           --split4 = ? 
-           --split4 : s1' ++ s2' ++ s2 ≡ s
-           --split4 = trans split3 split1
-           --assocThm = Algebra.Monoid.assoc Data.List.monoid
-  in accCorrect r1 s s1' (s2' ++ s2) (\cs -> acc r2 cs k) {!!} --(listProve {!!} {!!}) {-(s1' :++ s2' :++ s2 :≡ s)-}
+           split4 : s1' ++ s2' ++ s2 ≡ (s1' ++ s2') ++ s2 
+           split4 =  sym (listAssoc {s1'} {s2'} {s2})
+           transChain : s1' ++ s2' ++ s2 ≡ s
+           transChain = trans split4 (trans split3 split1)
+  in accCorrect r1 s s1' (s2' ++ s2) (\cs -> acc r2 cs k) transChain --(listProve {!!} {!!}) {-(s1' :++ s2' :++ s2 :≡ s)-}
     subMatch1 
     (accCorrect r2 (s2' ++ s2) s2' s2 k refl subMatch2 kproof)
 accCorrect (.r1 + .r2 ) s .s1 s2  k  
@@ -197,7 +215,7 @@ accCorrect ε (_ ∷ _ ) _ _ _ () _
 accCorrect _ [] (_ ∷ _ ) _ _ () _ _
 accCorrect _ [] _ (_ ∷ _ ) _ () _ _
 accCorrect (Lit _) [] _ _ _ () _ _
-accCorrect _ _ _ _ _ _ _ _ = {!!}
+accCorrect _ _ _ _ _ _ _ _ = {!!} --This case should disappear when I finish star
 
 
 
@@ -230,7 +248,7 @@ accComplete (r1 · r2) s k pf =
     s11 , s2' , psub1 , psub2 , match1  = accComplete r1 s (λ s' -> acc r2 s' k) pf
     s12 , s2 , p1 , p2 , match2 = accComplete r2 s2' k psub2
     localAssoc :  s11 ++ (s12 ++ s2) ≡ (s11 ++ s12) ++ s2
-    localAssoc = {!!}
+    localAssoc = sym (listAssoc {s11} {s12} {s2})
     subProof1 : s11 ++ s2' ≡ s11 ++ (s12 ++ s2)
     subProof1 = sym ( cong (λ x -> s11 ++ x) p1 )
     subProof2 : s11 ++ s2' ≡ (s11 ++ s12) ++ s2 
@@ -252,23 +270,3 @@ accComplete (r *) (sh ∷ st) k accProof with (orCases accProof)
 ... | inj₂ rightTrue  =  {!!} , {!!} , {!!} , {!!} , {!!}
 accComplete ∅ _ _ ()
 accComplete (Lit _) [] _ ()
---accComplete _ _ _ _ = {!!}  
-
-
-{-
-matchCorrect : (s : List Char) (r : RE) -> ((accept r s) ≡ true) -> REMatch s r
-matchCorrect _ ∅ ()
-matchCorrect [] ε _ = EmptyMatch
-matchCorrect (_ ∷ _) ε ()
-matchCorrect s (r1 + r2) pf  with accept r1 s | accept r2 s
-matchCorrect s (r1 + r2) pf | true | _ = LeftPlusMatch s r1 r2 (matchCorrect s r1 refl)
-matchCorrect s (r1 + r2) pf | _ | true = {!!}
-matchCorrect s (r1 + r2) () | false | false
-{-
-  if (accept r1 s) 
-  then LeftPlusMatch s r1 r2 (matchCorrect s r1 refl)
-  else RightPlusMatch s r1 r2 (matchCorrect s r2 refl)-}
-  
-
-matchCorrect s r match = {!!}
--}
