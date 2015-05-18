@@ -26,6 +26,8 @@ open List-solver renaming (nil to :[]; _⊕_ to _:++_; _⊜_ to _:≡_; solve to
 open import Algebra
 import Algebra.FunctionProperties as FunProp
 
+open import Data.Maybe
+
 data Null? : Set where
   NonNull : Null?
   MaybeNull : Null?
@@ -141,7 +143,7 @@ orCases : {x : Bool} {y : Bool} -> (x ∨ y ≡ true) -> (x ≡ true) ⊎ (y ≡
 orCases {true} y = inj₁ refl
 orCases {false} y = inj₂ y
 
-listRightIdent : { x : List Char} -> x ++ [] ≡ x
+listRightIdent : { x : List Char} -> (x ++ []) ≡ x
 listRightIdent {[]} = refl
 listRightIdent {x ∷ x₁} = cong (_∷_ x) (listRightIdent {x₁})
 
@@ -149,13 +151,20 @@ listAssoc : {x y z : List Char} -> (x ++ y) ++ z ≡ x ++ (y ++ z)
 listAssoc {[]} = λ {y} {z} → refl
 listAssoc {xh ∷ xt} {y} {z} = cong (_∷_ xh) (listAssoc {xt} {y} {z})
 
+maybeHead : List Char -> Maybe Char
+maybeHead [] = nothing
+maybeHead (x ∷ _) = just x
 
-{-
+myFromJust : Maybe Char -> Char
+myFromJust (just x) = x
+myFromJust (nothing) = 'a'
+
 sameHead : {a : Char}{b : Char}{l1 : List Char}{l2 : List Char} -> ((a ∷ l1) ≡ (b ∷ l2)) -> (a ≡ b)
-sameHead {l1 = []} {[]} pf1 = refl
-sameHead {l1 = []} {x ∷ l2} pf1 = {!!}
-sameHead {l1 = x ∷ l1} pf1 = {!!}
--}
+sameHead {a} {b} {l1} {l2} pf = 
+  let
+    maybeSameHead : (just a) ≡ (just b)
+    maybeSameHead = cong (maybeHead) pf
+  in cong myFromJust maybeSameHead
 
 accCorrect : 
   {n : Null? }
@@ -170,10 +179,11 @@ accCorrect :
 accCorrect ε  [] ._ []  k _ EmptyMatch kproof = kproof
 accCorrect (Lit .c) (c1 ∷ srest ) (.c ∷ []) s2 k stringProof (LitMatch c) kproof =
   let
-    
-    --sameNonEmpty = cong (\
-    sameHeads = {!!} -- cong Data.List.NonEmpty.head stringProof
-  in {!!} 
+    sameHeads = sameHead stringProof
+    primEq : (Dec (c ≡ c1))
+    primEq = yes sameHeads
+    pf3 = cong (λ theChar -> acc (Lit c) (c ∷ srest) k ) sameHeads
+  in {!!}
 accCorrect (.r1 · .r2 ) s ._ s2  k  split1 (ConcatMatch {_} {_} {s1'} {s2'} {r1} {r2} subMatch1 subMatch2) kproof  = 
   let
            s1 = s1' ++ s2'
@@ -270,3 +280,36 @@ accComplete (r *) (sh ∷ st) k accProof with (orCases accProof)
 ... | inj₂ rightTrue  =  {!!} , {!!} , {!!} , {!!} , {!!}
 accComplete ∅ _ _ ()
 accComplete (Lit _) [] _ ()
+
+acceptCorrect : 
+  {n : Null? }
+  (r : RE n) 
+  (s : List Char) 
+  -> (REMatch s r)
+  -> (accept r s ≡ true )
+acceptCorrect r s match = accCorrect r s s [] null listRightIdent match refl
+
+nullEq : {x : List Char} -> (null x ≡ true ) -> (x ≡ [])
+nullEq {[]} pf = refl
+nullEq {x ∷ x₁} ()
+
+acceptComplete :
+  {n : Null? }
+  (r : RE n) 
+  (s : List Char) 
+  -> (accept r s ≡ true )
+  -> REMatch s r 
+acceptComplete r s pf = 
+  let
+    s1 , s2 , sproof , ks2Proof , match = accComplete r s null pf
+    s2Null : s2 ≡ []
+    s2Null = nullEq ks2Proof
+    sp3 : s1 ++ s2 ≡ s1 ++ [] 
+    sp3 = cong (λ x -> s1 ++ x) s2Null
+    sp4 : s1 ++ s2 ≡ s1
+    sp4 = trans sp3 listRightIdent
+    sp5 : s1 ≡ s
+    sp5 = sym (trans (sym sproof) sp4)
+    typeEq : REMatch s1 r ≡ REMatch s r
+    typeEq = cong (λ ss -> REMatch ss r) sp5
+  in ? --match
