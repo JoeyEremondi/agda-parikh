@@ -216,12 +216,7 @@ accCorrect (Lit .c) (c1 ∷ srest ) (.c ∷ []) s2 k stringProof (LitMatch c) kp
     
     
   in trans (cong k restProof) kproof
-... | no pf = let
-    sameHeads = sameHead stringProof
-    primEq : (Dec (c ≡ c1))
-    primEq = yes sameHeads
-    pf3 = cong (λ theChar -> acc (Lit c) (c ∷ srest) k ) sameHeads
- in {!!} --TODO how to prove this case is absurd?
+accCorrect (Lit .c) (c1 ∷ srest ) (.c ∷ []) s2 k stringProof (LitMatch c) () | no pf
 
 {-
   let
