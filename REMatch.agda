@@ -312,4 +312,4 @@ acceptComplete r s pf =
     sp5 = sym (trans (sym sproof) sp4)
     typeEq : REMatch s1 r ≡ REMatch s r
     typeEq = cong (λ ss -> REMatch ss r) sp5
-  in ? --match
+  in {!!} --match
