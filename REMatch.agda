@@ -155,6 +155,10 @@ maybeHead : List Char -> Maybe Char
 maybeHead [] = nothing
 maybeHead (x ∷ _) = just x
 
+fakeTail : List Char -> List Char
+fakeTail [] = []
+fakeTail (_ ∷ t) = t 
+
 myFromJust : Maybe Char -> Char
 myFromJust (just x) = x
 myFromJust (nothing) = 'a'
@@ -165,6 +169,19 @@ sameHead {a} {b} {l1} {l2} pf =
     maybeSameHead : (just a) ≡ (just b)
     maybeSameHead = cong (maybeHead) pf
   in cong myFromJust maybeSameHead
+
+sameTail : {a : Char}{b : Char}{l1 : List Char}{l2 : List Char} -> ((a ∷ l1) ≡ (b ∷ l2)) -> (l1 ≡ l2)
+sameTail {a} {b} {l1} {l2} pf = cong fakeTail pf
+
+emptyMiddleList : {c : Char}{s1 s2 : List Char} -> (c ∷ s1 ≡ (c ∷ []) ++ s2 ) -> s1 ≡ s2
+emptyMiddleList {c} {s1} {s2} spf = 
+
+  let
+    p0 : (s1 ≡ [] ++ s2 )
+    p0 = cong fakeTail spf
+    p1 : [] ++ s2 ≡ s2
+    p1 = refl
+  in trans p0 p1
 
 accCorrect : 
   {n : Null? }
@@ -177,13 +194,45 @@ accCorrect :
   -> (acc r s k ≡ true )
 --accCorrect ∅ [] [] [] k _ () kproof 
 accCorrect ε  [] ._ []  k _ EmptyMatch kproof = kproof
-accCorrect (Lit .c) (c1 ∷ srest ) (.c ∷ []) s2 k stringProof (LitMatch c) kproof =
+accCorrect (Lit .c) (c1 ∷ srest ) (.c ∷ []) s2 k stringProof (LitMatch c) kproof with (c Data.Char.≟ c1)
+... | yes eqPf =   let
+    sameHeads : c ≡ c1
+    sameHeads = sameHead stringProof
+    p0 : c Data.List.∷ srest ≡ c1 Data.List.∷ srest
+    p0 = cong (λ x → x ∷ srest) sameHeads
+
+    flipProof : (c1 ∷ srest ) ≡ (c ∷ []) ++ s2
+    flipProof = sym stringProof
+    cFlip : (c ∷ srest ) ≡ (c ∷ []) ++ s2
+    cFlip = trans p0 flipProof
+    restProof : srest ≡ s2
+    restProof = emptyMiddleList cFlip
+
+    primEq : (Dec (c ≡ c1))
+    primEq = yes sameHeads
+    
+    pf3 = cong (λ theChar -> acc (Lit c) (c ∷ srest) k ) sameHeads
+    
+    
+    
+  in trans (cong k restProof) kproof
+... | no pf = let
+    sameHeads = sameHead stringProof
+    primEq : (Dec (c ≡ c1))
+    primEq = yes sameHeads
+    pf3 = cong (λ theChar -> acc (Lit c) (c ∷ srest) k ) sameHeads
+ in {!!} --TODO how to prove this case is absurd?
+
+{-
   let
     sameHeads = sameHead stringProof
     primEq : (Dec (c ≡ c1))
     primEq = yes sameHeads
     pf3 = cong (λ theChar -> acc (Lit c) (c ∷ srest) k ) sameHeads
-  in {!!}
+    restProof : srest ≡ s2
+    restProof = {!!}
+  in cong k restProof
+-}
 accCorrect (.r1 · .r2 ) s ._ s2  k  split1 (ConcatMatch {_} {_} {s1'} {s2'} {r1} {r2} subMatch1 subMatch2) kproof  = 
   let
            s1 = s1' ++ s2'
@@ -293,6 +342,9 @@ nullEq : {x : List Char} -> (null x ≡ true ) -> (x ≡ [])
 nullEq {[]} pf = refl
 nullEq {x ∷ x₁} ()
 
+substMatch : {n : Null?}{r : RE n}{s s1 : List Char} -> s1 ≡ s -> REMatch s1 r -> REMatch s r
+substMatch refl m = m
+
 acceptComplete :
   {n : Null? }
   (r : RE n) 
@@ -310,6 +362,4 @@ acceptComplete r s pf =
     sp4 = trans sp3 listRightIdent
     sp5 : s1 ≡ s
     sp5 = sym (trans (sym sproof) sp4)
-    typeEq : REMatch s1 r ≡ REMatch s r
-    typeEq = cong (λ ss -> REMatch ss r) sp5
-  in {!!} --match
+  in substMatch sp5 match --match
