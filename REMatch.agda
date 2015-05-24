@@ -28,28 +28,15 @@ import Algebra.FunctionProperties as FunProp
 
 open import Data.Maybe
 
-data Null? : Set where
-  NonNull : Null?
-  MaybeNull : Null?
 
-nullTop : Null? -> Null? -> Null?
-nullTop MaybeNull MaybeNull = MaybeNull
-nullTop _ _ = NonNull
 
-nullBottom : Null? -> Null? -> Null?
-nullBottom NonNull NonNull = NonNull
-nullBottom _ _ = MaybeNull
+open import RETypes
 
 
 
 
-data RE : Null? -> Set where
-  ε : RE MaybeNull
-  ∅ : RE NonNull 
-  Lit : Char -> RE NonNull 
-  _+_ : {n1 : Null? } -> {n2 : Null?} -> RE n1 -> RE n2 -> RE (nullBottom n1 n2)
-  _·_ :  {n1 : Null? } -> {n2 : Null?} -> RE n1 -> RE n2 -> RE (nullTop n1 n2)
-  _* : RE NonNull -> RE MaybeNull
+
+
 
 listDivisions : List Char -> List (List Char × List Char)
 listDivisions [] = ( [] , []) ∷ []
@@ -59,55 +46,51 @@ elementMatches : {A : Set} (f : A -> Bool) -> List A -> Bool
 elementMatches f [] = false
 elementMatches f (h ∷ t) = (f h) ∨ elementMatches f t
 
+{-
 mutual
 
   starMatch : {n : Null?} -> (RE n) -> List Char -> List Char -> (List Char -> Bool) -> Bool
   starMatch (r *) s1 (sh ∷ st) k =  (acc r (s1 ++ Data.List.[ sh ]) null ∧ acc ( r *) st k )  ∨ starMatch (r *) (s1 ++ Data.List.[ sh ]) st k
   starMatch (r *) s1 [] k = false
   starMatch _ _ _ _ = false
+-}
 
-  acc :  {n : Null?} -> RE n -> List Char -> (List Char -> Bool) -> Bool
-  acc ε s k = k s
-  acc ∅ _ _ = false
-  acc (Lit _) [] _ = false
-  acc (Lit c) (sFirst ∷ sRest) k with (c Data.Char.≟ sFirst)
-  ... | yes pf  = (k sRest)
-  ... | no _  = false
-  acc (r₁ + r₂) s k = (acc r₁ s k) ∨ (acc r₂ s k)
-  acc (r₁ · r₂) s k = acc r₁ s (λ s' -> acc r₂ s' k)
-  acc (r *) [] k = (k [])  
-  acc (r *) (ch ∷ ct) k = 
-    let
-      cs = ch ∷ ct
-    in k cs ∨ starMatch r [] cs k
-    --acc r cs (\cs' -> acc (r) cs' k)
-    --acc (r *) (sFirst ∷ sRest) k =  starMatch r (sFirst ∷ [] ) sRest k
+{-# TERMINATING #-}
+acc :  {n : Null?} -> RE n -> List Char -> (List Char -> Bool) -> Bool
+acc ε s k = k s
+acc ∅ _ _ = false
+acc (Lit _) [] _ = false
+acc (Lit c) (sFirst ∷ sRest) k with (c Data.Char.≟ sFirst)
+... | yes pf  = (k sRest)
+... | no _  = false
+acc (r₁ + r₂) s k = (acc r₁ s k) ∨ (acc r₂ s k)
+acc (r₁ · r₂) s k = acc r₁ s (λ s' -> acc r₂ s' k)
+acc (r *) [] k = (k [])  
+acc (r *) (ch ∷ ct) k = 
+  let
+    cs = ch ∷ ct
+  in k cs ∨ acc r cs (\cs' -> acc (r *) cs' k)
+  --acc r cs (\cs' -> acc (r) cs' k)
+  --acc (r *) (sFirst ∷ sRest) k =  starMatch r (sFirst ∷ [] ) sRest k
 
 accept : {n : Null?} -> RE n -> List Char -> Bool
 accept r s = acc r s null
 
-data REMatch : {n : Null?} -> List Char -> RE n -> Set where
-  EmptyMatch : REMatch [] ε
-  LitMatch : (c : Char) -> REMatch (c ∷ []) (Lit c)
-  LeftPlusMatch : 
-    {n1 : Null?} {n2 : Null?} {s : List Char} {r1 : RE n1} {r2 : RE n2} 
-    -> REMatch s r1 
-    -> REMatch s (r1 + r2)  
-  RightPlusMatch : 
-    {n1 : Null?} {n2 : Null?} {s : List Char} {r1 : RE n1} {r2 : RE n2} 
-    -> REMatch s r2 
-    -> REMatch s (r1 + r2)
-  ConcatMatch : 
-    {n1 : Null?} {n2 : Null?} {s1 : List Char} {s2 : List Char} {r1 : RE n1} {r2 : RE n2}
-    -> REMatch s1 r1
-    -> REMatch s2 r2
-    -> REMatch (s1 ++ s2) (r1 · r2)
-  EmptyStarMatch : {r : RE NonNull} -> REMatch [] (r *)
-  StarMatch : 
-    {s1 : List Char} {s2 : List Char } {r : RE NonNull}
-    -> REMatch s1 r
-    -> REMatch s2 (r *)
-    -> REMatch (s1 ++ s2) (r *)
+ 
+nullCorrect : (r : RE NonNull) -> (s : List Char ) -> (REMatch s r) 
+  -> (∃ λ (h : Char) -> ∃ λ (t : List Char) -> (s ≡ h ∷ t) )
+nullCorrect r s match = {!!}
+
+--Taken from http://gelisam.blogspot.ca/2010/10/equality-is-useless-transmutation.html
+--Can probably be done with more complicated existing stuff, but this is easier
+mySubst : {X : Set} 
+       → (P : X → Set) 
+       → (x y : X) 
+       → x ≡ y 
+       → P x 
+       → P y 
+mySubst P v .v refl p = p 
+
 
 orLemma1 : {x : Bool} {y : Bool} -> (y ≡ true) -> (y ∨ x) ≡ true
 orLemma1 {x} {true} pf = refl
@@ -239,17 +222,37 @@ accCorrect (.r1 · .r2 ) s ._ s2  k  split1 (ConcatMatch {_} {_} {s1'} {s2'} {r1
            split4 =  sym (listAssoc {s1'} {s2'} {s2})
            transChain : s1' ++ s2' ++ s2 ≡ s
            transChain = trans split4 (trans split3 split1)
-  in accCorrect r1 s s1' (s2' ++ s2) (\cs -> acc r2 cs k) transChain --(listProve {!!} {!!}) {-(s1' :++ s2' :++ s2 :≡ s)-}
-    subMatch1 
-    (accCorrect r2 (s2' ++ s2) s2' s2 k refl subMatch2 kproof)
+  in accCorrect r1 s s1' (s2' ++ s2) (\cs -> acc r2 cs k) transChain
+    subMatch1 (accCorrect r2 (s2' ++ s2) s2' s2 k refl subMatch2 kproof)
 accCorrect (.r1 + .r2 ) s .s1 s2  k  
-  splitProof (LeftPlusMatch {_} {_} {s1} {r1} {r2} subMatch) kproof  = 
+  splitProof (LeftPlusMatch {_} {_} {s1} {r1} (r2) subMatch) kproof  = 
    orLemma1 (accCorrect r1 s s1 s2 k splitProof subMatch kproof )
 accCorrect (.r1 + .r2) s .s1 s2  k  
-  splitProof (RightPlusMatch {_} {_} {s1} {r1} {r2} subMatch) kproof  =
+  splitProof (RightPlusMatch {_} {_} {s1} (r1) {r2} subMatch) kproof  =
     let subCorrect = accCorrect r2 s s1 s2 k splitProof subMatch kproof
     in orLemma2 {acc r1 s k} {acc r2 s k} subCorrect
 accCorrect (.r *) [] ._ [] k _ (EmptyStarMatch {r}) kproof = kproof
+
+accCorrect {MaybeNull} (.r *) s ._ s2  k  split1 (StarMatch {c1} {s1t'} {s2'} {r} subMatch1 subMatch2) kproof  = 
+  let
+           s1' = (c1 ∷ s1t')
+           s1 = s1' ++ s2'
+           split2 : (s1' ++ s2') ≡ s1 
+           split2 = refl
+           split3 : (s1' ++ s2') ++ s2 ≡ s1 ++ s2
+           split3 = cong (λ x -> x ++ s2) split2
+           split4 : s1' ++ s2' ++ s2 ≡ (s1' ++ s2') ++ s2 
+           split4 =  sym (listAssoc {s1'} {s2'} {s2})
+           transChain : s1' ++ s2' ++ s2 ≡ s
+           transChain = trans split4 (trans split3 split1)
+           sub2' : REMatch {MaybeNull} s2' (r *) 
+           sub2' = subMatch2
+           subCorrect : acc (r *) (s2' ++ s2) k ≡ true
+           subCorrect = accCorrect (r *) (s2' ++ s2) s2' s2 k refl subMatch2 kproof
+           rightCorrect : acc r s (\cs' -> acc (r *) cs' k) ≡ true
+           rightCorrect = accCorrect r s s1' (s2' ++ s2) (λ cs → acc (r *) cs k) transChain subMatch1 subCorrect
+  in orLemma2 rightCorrect --accCorrect r s s1' (s2' ++ s2) (\cs -> acc (r *) cs k) transChain
+    --subMatch1 (accCorrect (r *) (s2' ++ s2) s2' s2 k refl subMatch2 kproof)
 
 accCorrect (r *) (sh ∷ st) [] s2 k sp1 _ kproof = 
   let
@@ -260,16 +263,18 @@ accCorrect (r *) (sh ∷ st) [] s2 k sp1 _ kproof =
     kproof2 = cong k (sym sp1)
     kproof3 : k s ≡ true
     kproof3 = trans kproof2 kproof
-    orProof : (k s ∨ starMatch r [] s k) ≡ true
+    --orProof : (k s ∨ starMatch r [] s k) ≡ true
     orProof = orLemma1 kproof3
   in orProof
+ --accCorrect r s s1' (s2' ++ s2) (\cs -> acc (r *) cs k) transChain
+    --subMatch1 (accCorrect (r *) (s2' ++ s2) s2' s2 k refl subMatch2 kproof)
 --accCorrect  (.r *) s ._ s2 k sp1 (StarMatch {s1'} {s1''} {r} sub1 sub2) kproof = ?
 accCorrect ∅ _ _ _ _ _ ()
 accCorrect ε (_ ∷ _ ) _ _ _ () _
 accCorrect _ [] (_ ∷ _ ) _ _ () _ _
 accCorrect _ [] _ (_ ∷ _ ) _ () _ _
 accCorrect (Lit _) [] _ _ _ () _ _
-accCorrect _ _ _ _ _ _ _ _ = {!!} --This case should disappear when I finish star
+--accCorrect _ _ _ _ _ _ _ _ = {!!} --This case should disappear when I finish star
 
 
 
@@ -278,7 +283,7 @@ boolExclMiddle {true} p1 ()
 boolExclMiddle {false} p1 p2 = p1
 
 
-
+{-# TERMINATING #-}
 accComplete :
   {n : Null?}
   (r : RE n) 
@@ -314,14 +319,40 @@ accComplete (r1 + r2) s k accProof with (orCases accProof)
 ...  | inj₁ leftTrue  = 
   let
     s1 , s2 , p1 , p2 , match = accComplete r1 s k leftTrue
-  in s1 , s2 , p1 , p2 , LeftPlusMatch match
+  in s1 , s2 , p1 , p2 , LeftPlusMatch r2 match
 ...  | inj₂ rightTrue  = let
     s1 , s2 , p1 , p2 , match = accComplete r2 s k rightTrue
-  in s1 , s2 , p1 , p2 , RightPlusMatch match
+  in s1 , s2 , p1 , p2 , RightPlusMatch r1 match
 accComplete (r *) [] k pf =  [] , [] , refl , pf , EmptyStarMatch
 accComplete (r *) (sh ∷ st) k accProof with (orCases accProof)
 ... | inj₁ leftTrue  =  [] , (sh ∷ st) , refl , leftTrue , EmptyStarMatch
-... | inj₂ rightTrue  =  {!!} , {!!} , {!!} , {!!} , {!!}
+... | inj₂ rightTrue  =  
+  let
+    s = sh ∷ st
+    sub1 : acc r s (λ s' -> acc (r *) s' k) ≡ true
+    sub1 = rightTrue
+    s11 , s2' , psub1 , psub2 , match1  = accComplete r s (λ s' -> acc (r *) s' k) rightTrue
+    s12 , s2 , p1 , p2 , match2 = accComplete (r *) s2' k psub2
+    localAssoc :  s11 ++ (s12 ++ s2) ≡ (s11 ++ s12) ++ s2
+    localAssoc = sym (listAssoc {s11} {s12} {s2})
+    subProof1 : s11 ++ s2' ≡ s11 ++ (s12 ++ s2)
+    subProof1 = sym ( cong (λ x -> s11 ++ x) p1 )
+    subProof2 : s11 ++ s2' ≡ (s11 ++ s12) ++ s2 
+    subProof2 = trans subProof1 localAssoc
+    stringProof = trans (sym subProof2) psub1
+
+    s11h , s11t , nnpf = nullCorrect r s11 match1
+    nonNullPf : s11 ≡ s11h ∷ s11t
+    nonNullPf = nnpf
+
+
+    m1 : REMatch (s11h ∷ s11t) r 
+    m1 = mySubst (λ str → REMatch str r) s11 (s11h ∷ s11t) (nonNullPf) match1 
+    m2 : REMatch s12 (r *)
+    m2 = match2
+    ourMatch : REMatch (s11 ++ s12) (r *)
+    ourMatch = StarMatch {s11h} {s11t} {s12} {r} ? ? 
+  in (s11 ++ s12 ) , s2 , stringProof , p2 , ourMatch
 accComplete ∅ _ _ ()
 accComplete (Lit _) [] _ ()
 
