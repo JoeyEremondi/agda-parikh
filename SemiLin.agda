@@ -72,22 +72,14 @@ LinComb {n} initV (base , m , vset)  =
 --TODO should this be vectors, to ensure finite?
 SemiLinSet : ℕ -> Set
 SemiLinSet n = List (LinSet n)
-{-
---Witnesses for Membership in linear and semi-linear sets
-data InLinear : {n : ℕ} -> (v : Parikh n) -> LinSet n -> Set where
-  withScalar : {n : ℕ} 
-    -> (v : Parikh n) 
-    -> ( l : LinSet n)
-    -> (∃ (λ (c : ) -> v ≡ (c ·ₛ (proj₁ s) ) +v (proj₂ s) ))
-    -> InLinear v s
--}
+
 --Basically just a proof that there's some element of the list containing the vector
 data InSemiLin : {n : ℕ} -> (v : Parikh n) -> (sl : SemiLinSet n) -> Set where
   inHead : {n : ℕ} 
     -> (v : Parikh n) 
     -> (sh : LinSet n) 
     -> (st : SemiLinSet n)
---    -> InLinear v sh
+    -> LinComb v sh
     -> InSemiLin v (sh ∷ st)
   inTail : {n : ℕ} 
     -> (v : Parikh n) 
@@ -96,11 +88,19 @@ data InSemiLin : {n : ℕ} -> (v : Parikh n) -> (sl : SemiLinSet n) -> Set where
     -> InSemiLin v st
     -> InSemiLin v (sh ∷ st)
 
+--Sum of each vector in a linear set
+_+l_ : {n : ℕ} -> LinSet n -> LinSet n -> LinSet n
+(base1 , m1 , vecs1 ) +l (base2 , m2 , vecs2 ) = 
+  let
+    vecs = Data.Vec.concat (Data.Vec.map (λ v1 -> Data.Vec.map (λ v2 -> v1 +v v2  ) vecs1 ) vecs2)
+  in base1 +v base2 , m2 * m1 , vecs
 
-{-
+
 --Sum each linear set in the two semi-linear sets
 _+s_ : {n : ℕ} -> SemiLinSet n -> SemiLinSet n -> SemiLinSet n
-s1 +s s2 = Data.List.concat (Data.List.map (λ l1 -> Data.List.map (λ l2 -> (proj₁ l1 +v proj₁ l2 , proj₂ l1 +v proj₂ l2 )  ) s2 ) s1)
+s1 +s s2 = Data.List.concat (Data.List.map (λ l1 -> Data.List.map (λ l2 -> l1 +l l2 )  s2 ) s1 )
+
+
 
 --Creates a  vector
 --Which has 1 in the specified component, and 0 elsewhere
@@ -109,11 +109,11 @@ basis Fin.zero  = Data.Vec.[ suc zero ] Data.Vec.++ v0
 basis (Fin.suc f) = 0 ∷ basis f 
 
 reSemiLin : {n : ℕ} {null? : RETypes.Null?} -> (Char -> Fin.Fin n) -> RETypes.RE null? -> SemiLinSet n  
-reSemiLin cmap RETypes.ε = Data.List.[ v0 , v0 ]
+reSemiLin cmap RETypes.ε = Data.List.[ v0 , 0 , [] ]
 reSemiLin cmap RETypes.∅ = []
-reSemiLin cmap (RETypes.Lit x) = Data.List.[ v0 , basis (cmap x ) ]
+reSemiLin cmap (RETypes.Lit x) = Data.List.[ basis (cmap x ) , 0 , [] ]
 reSemiLin cmap (r1 RETypes.+ r2) = reSemiLin cmap r1 Data.List.++ reSemiLin cmap r2
 reSemiLin cmap (r1 RETypes.· r2) = reSemiLin cmap r1 +s reSemiLin cmap r2
 reSemiLin cmap (r RETypes.*) = {!!}
 
--}
+
