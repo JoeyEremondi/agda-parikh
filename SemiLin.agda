@@ -108,12 +108,17 @@ basis : { n : ℕ} -> ( i : Fin.Fin n ) -> Parikh n
 basis Fin.zero  = Data.Vec.[ suc zero ] Data.Vec.++ v0 
 basis (Fin.suc f) = 0 ∷ basis f 
 
+--Used in star: given a linear set L, return (cl | l in L, c in ℕ)
+constMultLin : { n : ℕ} -> LinSet n -> LinSet n
+constMultLin (base , m , vecs ) = v0 , suc m , base ∷ vecs
+
 reSemiLin : {n : ℕ} {null? : RETypes.Null?} -> (Char -> Fin.Fin n) -> RETypes.RE null? -> SemiLinSet n  
 reSemiLin cmap RETypes.ε = Data.List.[ v0 , 0 , [] ]
 reSemiLin cmap RETypes.∅ = []
 reSemiLin cmap (RETypes.Lit x) = Data.List.[ basis (cmap x ) , 0 , [] ]
 reSemiLin cmap (r1 RETypes.+ r2) = reSemiLin cmap r1 Data.List.++ reSemiLin cmap r2
 reSemiLin cmap (r1 RETypes.· r2) = reSemiLin cmap r1 +s reSemiLin cmap r2
-reSemiLin cmap (r RETypes.*) = {!!}
+reSemiLin cmap (r RETypes.*) = Data.List.map (constMultLin ) (reSemiLin cmap r)
+  
 
 
