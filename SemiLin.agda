@@ -108,17 +108,36 @@ basis : { n : ℕ} -> ( i : Fin.Fin n ) -> Parikh n
 basis Fin.zero  = Data.Vec.[ suc zero ] Data.Vec.++ v0 
 basis (Fin.suc f) = 0 ∷ basis f 
 
---Used in star: given a linear set L, return (cl | l in L, c in ℕ)
+--Used in star: given a linear set L, return { cl | l ∈ L, c ∈ ℕ}
 constMultLin : { n : ℕ} -> LinSet n -> LinSet n
 constMultLin (base , m , vecs ) = v0 , suc m , base ∷ vecs
 
-reSemiLin : {n : ℕ} {null? : RETypes.Null?} -> (Char -> Fin.Fin n) -> RETypes.RE null? -> SemiLinSet n  
+reSemiLin : {n : ℕ} {null? : RETypes.Null?} -> (Char -> Fin.Fin n) -> RETypes.RE null? -> SemiLinSet n 
 reSemiLin cmap RETypes.ε = Data.List.[ v0 , 0 , [] ]
 reSemiLin cmap RETypes.∅ = []
 reSemiLin cmap (RETypes.Lit x) = Data.List.[ basis (cmap x ) , 0 , [] ]
 reSemiLin cmap (r1 RETypes.+ r2) = reSemiLin cmap r1 Data.List.++ reSemiLin cmap r2
 reSemiLin cmap (r1 RETypes.· r2) = reSemiLin cmap r1 +s reSemiLin cmap r2
 reSemiLin cmap (r RETypes.*) = Data.List.map (constMultLin ) (reSemiLin cmap r)
-  
+
+wordParikh : {n : ℕ} -> (Char -> Fin.Fin n) -> (w : List Char) -> Parikh n
+wordParikh cmap [] = v0
+wordParikh cmap (x ∷ w) = (basis (cmap x)) +v (wordParikh cmap w)
+
+reParikhCorrect : {n : ℕ} -> {null? : RETypes.Null?} -> (cmap : Char -> Fin.Fin n) -> (r : RETypes.RE null?) -> (w : List Char ) -> RETypes.REMatch w r -> (InSemiLin (wordParikh cmap w) (reSemiLin cmap r ) ) 
+reParikhCorrect cmap .RETypes.ε .[] RETypes.EmptyMatch = {!!}
+reParikhCorrect cmap .(RETypes.Lit c) .(c ∷ []) (RETypes.LitMatch c) = {!!}
+reParikhCorrect cmap ._ w (RETypes.LeftPlusMatch r2 match) = {!!}
+reParikhCorrect cmap ._ s (RETypes.RightPlusMatch r1 match) = {!!}
+reParikhCorrect cmap ._ ._ (RETypes.ConcatMatch match match₁) = {!!}
+reParikhCorrect cmap ._ .[] RETypes.EmptyStarMatch = {!!}
+reParikhCorrect cmap ._ ._ (RETypes.StarMatch match match₁) = {!!}
 
 
+reParikhComplete : {n : ℕ} -> {null? : RETypes.Null?}
+  -> (cmap : Char -> Fin.Fin n)
+  -> (r : RETypes.RE null?)
+  -> (v : Parikh n )
+  -> (InSemiLin v (reSemiLin cmap r ) )
+  -> ∃ (λ w -> (v ≡ wordParikh cmap w) × (RETypes.REMatch w r) ) 
+reParikhComplete cmap r v linComb = {!!}
