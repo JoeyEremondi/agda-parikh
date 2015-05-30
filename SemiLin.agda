@@ -18,10 +18,14 @@ open import Relation.Binary.Core
 
 open import Category.Monad
 
+open import Data.Nat.Properties.Simple
+
 import RETypes
 
-
---Maps each character in a list to a natural number
+--The Parikh vector for a word is the count of occurrences of
+--each letter of our alphabet in that word.
+--We represent this by a function which
+--maps each character in a list to a natural number
 Parikh : ℕ -> Set
 Parikh n = Vec ℕ n
 
@@ -40,7 +44,7 @@ v0 : {n : ℕ} -> Parikh n
 v0 {zero} = []
 v0 {suc n} = 0 ∷ v0
 
---Prove that 0 is an identity
+--Prove that 0 is a neutral element
 v0identLeft : {n : ℕ} -> {v : Parikh n} -> v0 +v v ≡ v
 v0identLeft {v = []} = refl
 v0identLeft {v = x ∷ v} = 
@@ -48,14 +52,27 @@ v0identLeft {v = x ∷ v} =
     subIdent = v0identLeft {v = v}
   in cong (λ t → x ∷ t) subIdent
 
+v0commut : {n : ℕ} -> (u : Parikh n) -> (v : Parikh n) -> (u +v v ≡ v +v u)
+v0commut [] [] = refl
+v0commut (x ∷ u) (y ∷ v) = 
+  let
+    natCommut : x + y ≡ y + x
+    natCommut = +-comm x y 
+    tailSame : u +v v ≡ v +v u
+    tailSame = v0commut u v 
+  in subst (λ z → (x ∷ u) ≡ (z ∷ v)) natCommut (cong (λ t → x ∷ t) tailSame)
 
+v0identRight : {n : ℕ} -> {v : Parikh n} -> v +v v0 ≡ v
+v0identRight {v = v} = trans (v0commut v v0) v0identLeft
 
---A linear set is defined entirely by a pair of vectors
---(u,v) represents the set { cu + v | c ∈ ℕ} of n-dimensional vectors 
+--A linear set is defined by an offset vector b
+--And a set of m vectors v1 ... vm.
+--A vector u is in a linear set if there exists constants c1 ... cm
+--such that u = b + c1·v1 + ... + cm·vm 
 LinSet : ℕ -> Set
 LinSet n = (Parikh n) × (∃ λ (m : ℕ) → Vec (Parikh n) m )
 
-
+--A type acting as a witness that a vector is in a linear set
 LinComb : {n : ℕ} -> Parikh n -> LinSet n -> Set
 LinComb {n} initV (base , m , vset)  = 
   ∃ (λ (cs : Vec ℕ m) -> 
@@ -68,20 +85,22 @@ LinComb {n} initV (base , m , vset)  =
       comb = Data.Vec.foldr (\_ -> Parikh n) _+v_ v0 scaledVecs
     in (base +v comb) ≡ initV )
 
---A semi-linear set can be represented by a finite list of linear sets
---TODO should this be vectors, to ensure finite?
+--A semi-linear is a finite union of linear sets
+--We represent this using a list
+--TODO Vector?
 SemiLinSet : ℕ -> Set
 SemiLinSet n = List (LinSet n)
 
---Basically just a proof that there's some element of the list containing the vector
+--Data type for a witness that an element is in a semiLinear set
+--Basically just a proof that there's some element (linear set) of the list containing the vector
 data InSemiLin : {n : ℕ} -> (v : Parikh n) -> (sl : SemiLinSet n) -> Set where
-  inHead : {n : ℕ} 
+  InHead : {n : ℕ} 
     -> (v : Parikh n) 
     -> (sh : LinSet n) 
     -> (st : SemiLinSet n)
     -> LinComb v sh
     -> InSemiLin v (sh ∷ st)
-  inTail : {n : ℕ} 
+  InTail : {n : ℕ} 
     -> (v : Parikh n) 
     -> (sh : LinSet n) 
     -> (st : SemiLinSet n)
@@ -112,6 +131,10 @@ basis (Fin.suc f) = 0 ∷ basis f
 constMultLin : { n : ℕ} -> LinSet n -> LinSet n
 constMultLin (base , m , vecs ) = v0 , suc m , base ∷ vecs
 
+
+--The algorithm mapping regular expressions to the Parikh set of
+--the language matched by the RE
+--We prove this correct below
 reSemiLin : {n : ℕ} {null? : RETypes.Null?} -> (Char -> Fin.Fin n) -> RETypes.RE null? -> SemiLinSet n 
 reSemiLin cmap RETypes.ε = Data.List.[ v0 , 0 , [] ]
 reSemiLin cmap RETypes.∅ = []
@@ -120,13 +143,43 @@ reSemiLin cmap (r1 RETypes.+ r2) = reSemiLin cmap r1 Data.List.++ reSemiLin cmap
 reSemiLin cmap (r1 RETypes.· r2) = reSemiLin cmap r1 +s reSemiLin cmap r2
 reSemiLin cmap (r RETypes.*) = Data.List.map (constMultLin ) (reSemiLin cmap r)
 
+--Find the Parikh vector of a given word
 wordParikh : {n : ℕ} -> (Char -> Fin.Fin n) -> (w : List Char) -> Parikh n
 wordParikh cmap [] = v0
 wordParikh cmap (x ∷ w) = (basis (cmap x)) +v (wordParikh cmap w)
 
-reParikhCorrect : {n : ℕ} -> {null? : RETypes.Null?} -> (cmap : Char -> Fin.Fin n) -> (r : RETypes.RE null?) -> (w : List Char ) -> RETypes.REMatch w r -> (InSemiLin (wordParikh cmap w) (reSemiLin cmap r ) ) 
-reParikhCorrect cmap .RETypes.ε .[] RETypes.EmptyMatch = {!!}
-reParikhCorrect cmap .(RETypes.Lit c) .(c ∷ []) (RETypes.LitMatch c) = {!!}
+reParikhCorrect : 
+  {n : ℕ} 
+  -> {null? : RETypes.Null?} 
+  -> (cmap : Char -> Fin.Fin n) 
+  -> (r : RETypes.RE null?) 
+  -> (w : List Char ) 
+  -> RETypes.REMatch w r
+  -> (wordPar : Parikh n)
+  -> (wordParikh cmap w ≡ wordPar)
+  -> (langParikh : SemiLinSet n)
+  -> (langParikh ≡ reSemiLin cmap r )
+  -> (InSemiLin wordPar langParikh ) 
+reParikhCorrect cmap .RETypes.ε .[] RETypes.EmptyMatch wordPar wpf langParikh lpf = 
+  let
+    emptyWordPar : wordPar ≡ v0
+    emptyWordPar = trans (sym wpf) refl
+    emptyLangPf : (( v0 , 0 , [] ) ∷ []) ≡ langParikh
+    emptyLangPf = sym lpf
+    zeroSelf : v0 +v v0 ≡ v0
+    zeroSelf = v0identLeft
+    inSemi : InSemiLin wordPar (( v0 , 0 , [] ) ∷ [] )
+    inSemi = InHead wordPar (v0 , zero , []) [] (v0 , trans zeroSelf (sym emptyWordPar))
+  in subst (λ x → InSemiLin wordPar x) emptyLangPf inSemi
+reParikhCorrect cmap .(RETypes.Lit c) .(c ∷ []) (RETypes.LitMatch c) wordPar wpf langParikh lpf =
+  let
+    basisPf : wordPar ≡ (basis (cmap c))
+    basisPf = trans (sym wpf) (trans refl v0identRight)
+    basisSemiPf : langParikh ≡ Data.List.[ (basis (cmap c)) , 0 , []  ]
+    basisSemiPf = lpf
+    inSemi : InSemiLin wordPar (( (basis (cmap c)) , 0 , [] ) ∷ [] )
+    inSemi = InHead wordPar (basis (cmap c) , 0 , []) [] (v0 , sym (trans basisPf (sym v0identRight)))
+  in subst (λ x → InSemiLin wordPar x) (sym basisSemiPf) inSemi
 reParikhCorrect cmap ._ w (RETypes.LeftPlusMatch r2 match) = {!!}
 reParikhCorrect cmap ._ s (RETypes.RightPlusMatch r1 match) = {!!}
 reParikhCorrect cmap ._ ._ (RETypes.ConcatMatch match match₁) = {!!}
