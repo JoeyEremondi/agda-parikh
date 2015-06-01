@@ -100,9 +100,10 @@ andElim1 : {x : Bool} {y : Bool} -> (x ∧ y) ≡ true -> (x ≡ true)
 andElim1 {true} pf = refl
 andElim1 {false} ()
 
+--TODO Pattern match on and first
 andElim2 : {x : Bool} {y : Bool} -> (x ∧ y) ≡ true -> (y ≡ true)
 andElim2 {y = true} pf = refl
-andElim2 {y = false} () 
+andElim2 {x = x} {y = false} = {!!} 
 
 andCombine : {x : Bool} {y : Bool} -> x ≡ true -> y ≡ true -> (x ∧ y) ≡ true
 andCombine {true} pfx pfy = pfy
@@ -211,11 +212,11 @@ accCorrect (Lit .c) (c1 ∷ srest ) (.c ∷ []) s2 k stringProof (LitMatch c) ()
     restProof = {!!}
   in cong k restProof
 -}
-accCorrect (.r1 · .r2 ) s ._ s2  k  split1 (ConcatMatch {_} {_} {s1'} {s2'} {r1} {r2} subMatch1 subMatch2) kproof  = 
+accCorrect (.r1 · .r2 ) s .s1 s2  k  split1 (ConcatMatch {_} {_} {n3} {nt} {s1'} {s2'} {s1} {spf'} {r1} {r2} subMatch1 subMatch2) kproof  = 
   let
-           s1 = s1' ++ s2'
+           --s1 = s1' ++ s2'
            split2 : (s1' ++ s2') ≡ s1 
-           split2 = refl
+           split2 = spf' --refl
            split3 : (s1' ++ s2') ++ s2 ≡ s1 ++ s2
            split3 = cong (λ x -> x ++ s2) split2
            split4 : s1' ++ s2' ++ s2 ≡ (s1' ++ s2') ++ s2 
@@ -225,10 +226,10 @@ accCorrect (.r1 · .r2 ) s ._ s2  k  split1 (ConcatMatch {_} {_} {s1'} {s2'} {r1
   in accCorrect r1 s s1' (s2' ++ s2) (\cs -> acc r2 cs k) transChain
     subMatch1 (accCorrect r2 (s2' ++ s2) s2' s2 k refl subMatch2 kproof)
 accCorrect (.r1 + .r2 ) s .s1 s2  k  
-  splitProof (LeftPlusMatch {_} {_} {s1} {r1} (r2) subMatch) kproof  = 
+  splitProof (LeftPlusMatch {_} {_} {n3} {nb} {s1} {r1} (r2) subMatch) kproof  = 
    orLemma1 (accCorrect r1 s s1 s2 k splitProof subMatch kproof )
 accCorrect (.r1 + .r2) s .s1 s2  k  
-  splitProof (RightPlusMatch {_} {_} {s1} (r1) {r2} subMatch) kproof  =
+  splitProof (RightPlusMatch {_} {_} {n3} {nb} {s1} (r1) {r2} subMatch) kproof  =
     let subCorrect = accCorrect r2 s s1 s2 k splitProof subMatch kproof
     in orLemma2 {acc r1 s k} {acc r2 s k} subCorrect
 accCorrect (.r *) [] ._ [] k _ (EmptyStarMatch {r}) kproof = kproof
@@ -251,6 +252,7 @@ accCorrect {MaybeNull} (.r *) s ._ s2  k  split1 (StarMatch {c1} {s1t'} {s2'} {r
            subCorrect = accCorrect (r *) (s2' ++ s2) s2' s2 k refl subMatch2 kproof
            rightCorrect : acc r s (\cs' -> acc (r *) cs' k) ≡ true
            rightCorrect = accCorrect r s s1' (s2' ++ s2) (λ cs → acc (r *) cs k) transChain subMatch1 subCorrect
+  --TODO pass in x and y explicitly
   in orLemma2 rightCorrect --accCorrect r s s1' (s2' ++ s2) (\cs -> acc (r *) cs k) transChain
     --subMatch1 (accCorrect (r *) (s2' ++ s2) s2' s2 k refl subMatch2 kproof)
 
@@ -351,7 +353,7 @@ accComplete (r *) (sh ∷ st) k accProof with (orCases accProof)
     m2 : REMatch s12 (r *)
     m2 = match2
     ourMatch : REMatch (s11 ++ s12) (r *)
-    ourMatch = StarMatch {s11h} {s11t} {s12} {r} ? ? 
+    ourMatch = {!!} --StarMatch {s11h} {s11t} {s12} {r} ? ? 
   in (s11 ++ s12 ) , s2 , stringProof , p2 , ourMatch
 accComplete ∅ _ _ ()
 accComplete (Lit _) [] _ ()
