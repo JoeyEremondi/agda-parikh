@@ -148,6 +148,23 @@ wordParikh : {n : ℕ} -> (Char -> Fin.Fin n) -> (w : List Char) -> Parikh n
 wordParikh cmap [] = v0
 wordParikh cmap (x ∷ w) = (basis (cmap x)) +v (wordParikh cmap w)
 
+--Show that the Parikh of concatenating two words
+--Is the sum of their Parikhs
+wordParikhPlus : {n : ℕ} 
+  -> (cmap : Char -> Fin.Fin n) 
+  -> (u : List Char) 
+  -> (v : List Char)
+  -> wordParikh cmap (u Data.List.++ v) ≡ (wordParikh cmap u) +v (wordParikh cmap v)
+wordParikhPlus cmap [] v = sym v0identLeft
+wordParikhPlus cmap (x ∷ u) v = 
+  let
+    subSum : wordParikh cmap (u Data.List.++ v) ≡ (wordParikh cmap u) +v (wordParikh cmap v)
+    subSum = wordParikhPlus cmap u v
+    charBasis : wordParikh cmap Data.List.[ x ] ≡ basis (cmap x)
+    charBasis = v0identRight
+    listConcat : ((x ∷ u) Data.List.++ v ) ≡ [ x ] Data.List.++ ( (u Data.List.++ v) )
+  in {!!}
+
 reParikhCorrect : 
   {n : ℕ} 
   -> {null? : RETypes.Null?} 
@@ -180,11 +197,17 @@ reParikhCorrect cmap .(RETypes.Lit c) .(c ∷ []) (RETypes.LitMatch c) wordPar w
     inSemi : InSemiLin wordPar (( (basis (cmap c)) , 0 , [] ) ∷ [] )
     inSemi = InHead wordPar (basis (cmap c) , 0 , []) [] (v0 , sym (trans basisPf (sym v0identRight)))
   in subst (λ x → InSemiLin wordPar x) (sym basisSemiPf) inSemi
-reParikhCorrect cmap ._ w (RETypes.LeftPlusMatch r2 match) = {!!}
-reParikhCorrect cmap ._ s (RETypes.RightPlusMatch r1 match) = {!!}
-reParikhCorrect cmap ._ ._ (RETypes.ConcatMatch match match₁) = {!!}
-reParikhCorrect cmap ._ .[] RETypes.EmptyStarMatch = {!!}
-reParikhCorrect cmap ._ ._ (RETypes.StarMatch match match₁) = {!!}
+reParikhCorrect cmap (r1 RETypes.+ .r2) w (RETypes.LeftPlusMatch r2 match) wordPar wpf langParikh lpf =
+  let
+    leftParikh = reSemiLin cmap r1
+    leftInSemi = reParikhCorrect cmap r1 w match wordPar wpf leftParikh refl
+    --Idea: show that langParikh is leftParikh ++ rightParikh
+    --And that this means that it must be in the concatentation
+  in {! !}
+reParikhCorrect cmap ._ s (RETypes.RightPlusMatch r1 match) wordPar wpf langParikh lpf = {!!}
+reParikhCorrect cmap ._ ._ (RETypes.ConcatMatch match match₁) wordPar wpf langParikh lpf = {!!}
+reParikhCorrect cmap ._ .[] RETypes.EmptyStarMatch wordPar wpf langParikh lpf = {!!}
+reParikhCorrect cmap ._ ._ (RETypes.StarMatch match match₁) wordPar wpf langParikh lpf = {!!}
 
 
 reParikhComplete : {n : ℕ} -> {null? : RETypes.Null?}

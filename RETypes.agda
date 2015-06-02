@@ -19,8 +19,8 @@ data NullTop : Null? -> Null? -> Null? -> Set where
 
 data NullBottom : Null? -> Null? -> Null? -> Set where
   BothNullB : NullBottom NonNull NonNull NonNull
-  LeftNullB : NullBottom MaybeNull NonNull NonNull
-  RightNullB : NullBottom NonNull MaybeNull NonNull
+  LeftNullB : NullBottom MaybeNull NonNull MaybeNull
+  RightNullB : NullBottom NonNull MaybeNull MaybeNull
   BothNonNullB : NullBottom MaybeNull MaybeNull MaybeNull
 
 {-
@@ -82,7 +82,7 @@ data REMatch : {n : Null?} -> List Char -> RE n -> Set where
     -> REMatch {n3} s3 (_·_ {n1} {n2} {n3} {nt} r1 r2)
   EmptyStarMatch : {r : RE NonNull} -> REMatch [] (r *)
   StarMatch : 
-    {c1 : Char} {s1t : List Char} {s2 : List Char } {r : RE NonNull}
+    {c1 : Char} {s1t s2 s3 : List Char} {spf : ((c1 ∷ s1t) ++ s2) ≡ s3} {r : RE NonNull}
     -> REMatch (c1 ∷ s1t) r
     -> REMatch s2 (r *)
-    -> REMatch ((c1 ∷ s1t) ++ s2) (r *)
+    -> REMatch s3 (r *)

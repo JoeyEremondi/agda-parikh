@@ -33,6 +33,9 @@ open import Data.Maybe
 open import RETypes
 
 
+import Relation.Binary.Reflection as Ref
+
+
 
 
 
@@ -76,10 +79,52 @@ acc (r *) (ch ∷ ct) k =
 accept : {n : Null?} -> RE n -> List Char -> Bool
 accept r s = acc r s null
 
+concatPreservesNonNull : {s1 : List Char}
+  -> {s2 : List Char}
+  -> (∃ λ (h : Char) -> ∃ λ (t : List Char) -> (s1 ≡ h ∷ t) )
+  -> (∃ λ (h : Char) -> ∃ λ (t : List Char) -> (s1 ++ s2 ≡ h ∷ t) )
+concatPreservesNonNull {s1} {s2 = []} (sh , st , pf) =
+  let
+    concatPf : s1 ++ [] ≡ s1
+    concatPf = {!!} --Should be easy, I might have already proved something similar,
+    --This is probably a good place to try the List prover stuff
+  in sh , st , trans concatPf pf
+concatPreservesNonNull {s1} {s2 = x ∷ s2} (sh , st , pf) = 
+  let
+    --subProof : (∃ λ (h : Char) -> ∃ λ (t : List Char) -> (s1 ++ s2 ≡ h ∷ t) )
+    (h , t , subProof) = concatPreservesNonNull {s1} {s2} (sh , st , pf)
+    p2 : ((sh ∷ st) ++ s2 ≡ h ∷ t)
+    p2 = subst (λ x₁ → x₁ ++ s2 ≡ h ∷ t) pf subProof 
+  in sh , (st ++ (x ∷ s2)) , cong (λ x₁ → x₁ ++ x ∷ s2) pf
  
+
+concatPreservesNonNull2 : {s1 : List Char}
+  -> {s2 : List Char}
+  -> (∃ λ (h : Char) -> ∃ λ (t : List Char) -> (s2 ≡ h ∷ t) )
+  -> (∃ λ (h : Char) -> ∃ λ (t : List Char) -> (s1 ++ s2 ≡ h ∷ t) )
+concatPreservesNonNull2 {[]} (sh , st , pf) = sh , st , pf
+concatPreservesNonNull2 {x ∷ s1} {s2} (sh , st , pf) = x , s1 ++ s2 , refl
+
+
+open ≡-Reasoning
+
 nullCorrect : (r : RE NonNull) -> (s : List Char ) -> (REMatch s r) 
   -> (∃ λ (h : Char) -> ∃ λ (t : List Char) -> (s ≡ h ∷ t) )
-nullCorrect r s match = {!!}
+nullCorrect .(Lit c) .(c ∷ []) (LitMatch c) = c , [] , refl
+nullCorrect ._ s (LeftPlusMatch {nb = BothNullB} {r1 = r1} r2 match) = nullCorrect r1 s match
+nullCorrect ._ s (RightPlusMatch {nb = BothNullB} r1 {r2 = r2} match) = nullCorrect r2 s match
+nullCorrect .(r1 · r2) s (ConcatMatch {nt = LeftNullT} {s1 = s1} {s2 = s2} {spf = spf} {r1 = r1} {r2 = r2}  match1 match2) = 
+  let
+    sh , st , subPf = concatPreservesNonNull2 {s1 = s1} {s2 = s2} (nullCorrect r2 s2 match2)
+  in sh , st , trans (sym spf) subPf   --subH , subT , ? 
+nullCorrect ._ s (ConcatMatch {nt = BothNonNullT} {s1 = s1} {s2 = s2} {spf = spf} {r1 = r1} {r2 = r2} match1 match2) =   
+  let
+    sh , st , subPf = concatPreservesNonNull2 {s1 = s1} {s2 = s2} (nullCorrect r2 s2 match2)
+  in sh , st , trans (sym spf) subPf 
+nullCorrect ._ s (ConcatMatch {nt = RightNullT} {s1 = s1} {s2 = s2} {spf = spf} {r1 = r1} {r2 = r2} match1 match2) = 
+  let
+    sh , st , subPf = concatPreservesNonNull {s1 = s1} {s2 = s2} (nullCorrect r1 s1 match1)
+  in sh , st , trans (sym spf) subPf  -- concatPreservesNonNull (nullCorrect r1 s1 match1)
 
 --Taken from http://gelisam.blogspot.ca/2010/10/equality-is-useless-transmutation.html
 --Can probably be done with more complicated existing stuff, but this is easier
@@ -103,7 +148,7 @@ andElim1 {false} ()
 --TODO Pattern match on and first
 andElim2 : {x : Bool} {y : Bool} -> (x ∧ y) ≡ true -> (y ≡ true)
 andElim2 {y = true} pf = refl
-andElim2 {x = x} {y = false} = {!!} 
+andElim2 {x = x} {y = false} = {!!} --TODO fill this in, or replace this whole thing with the semi-ring solver
 
 andCombine : {x : Bool} {y : Bool} -> x ≡ true -> y ≡ true -> (x ∧ y) ≡ true
 andCombine {true} pfx pfy = pfy
@@ -234,12 +279,12 @@ accCorrect (.r1 + .r2) s .s1 s2  k
     in orLemma2 {acc r1 s k} {acc r2 s k} subCorrect
 accCorrect (.r *) [] ._ [] k _ (EmptyStarMatch {r}) kproof = kproof
 
-accCorrect {MaybeNull} (.r *) s ._ s2  k  split1 (StarMatch {c1} {s1t'} {s2'} {r} subMatch1 subMatch2) kproof  = 
+accCorrect {MaybeNull} (.r *) s .s1 s2  k  split1 (StarMatch {c1} {s1t'} {s2'} {s1} {spf} {r} subMatch1 subMatch2) kproof  = 
   let
            s1' = (c1 ∷ s1t')
-           s1 = s1' ++ s2'
+           
            split2 : (s1' ++ s2') ≡ s1 
-           split2 = refl
+           split2 = spf
            split3 : (s1' ++ s2') ++ s2 ≡ s1 ++ s2
            split3 = cong (λ x -> x ++ s2) split2
            split4 : s1' ++ s2' ++ s2 ≡ (s1' ++ s2') ++ s2 
@@ -353,7 +398,7 @@ accComplete (r *) (sh ∷ st) k accProof with (orCases accProof)
     m2 : REMatch s12 (r *)
     m2 = match2
     ourMatch : REMatch (s11 ++ s12) (r *)
-    ourMatch = {!!} --StarMatch {s11h} {s11t} {s12} {r} ? ? 
+    ourMatch = StarMatch m1 m2
   in (s11 ++ s12 ) , s2 , stringProof , p2 , ourMatch
 accComplete ∅ _ _ ()
 accComplete (Lit _) [] _ ()
