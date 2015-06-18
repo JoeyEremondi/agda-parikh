@@ -21,12 +21,14 @@ open import Data.Sum
 
 open import Data.List.NonEmpty
 
-open List-solver renaming (nil to :[]; _⊕_ to _:++_; _⊜_ to _:≡_; solve to listSolve; prove to listProve)
+--open List-solver renaming (nil to :[]; _⊕_ to _:++_; _⊜_ to _:≡_; solve to listSolve; prove to listProve)
 
 open import Algebra
 import Algebra.FunctionProperties as FunProp
 
 open import Data.Maybe
+
+open import Data.Nat
 
 
 
@@ -34,6 +36,8 @@ open import RETypes
 
 
 import Relation.Binary.Reflection as Ref
+
+import Data.Bool.Properties
 
 
 
@@ -86,9 +90,10 @@ concatPreservesNonNull : {s1 : List Char}
 concatPreservesNonNull {s1} {s2 = []} (sh , st , pf) =
   let
     concatPf : s1 ++ [] ≡ s1
-    concatPf = {!!} --Should be easy, I might have already proved something similar,
+    concatPf = (solve (suc zero) (λ x → x ⊕ nil , x) (λ {x} → refl)) s1 --Should be easy, I might have already proved something similar,
     --This is probably a good place to try the List prover stuff
   in sh , st , trans concatPf pf
+  where open List-solver
 concatPreservesNonNull {s1} {s2 = x ∷ s2} (sh , st , pf) = 
   let
     --subProof : (∃ λ (h : Char) -> ∃ λ (t : List Char) -> (s1 ++ s2 ≡ h ∷ t) )
@@ -148,7 +153,8 @@ andElim1 {false} ()
 --TODO Pattern match on and first
 andElim2 : {x : Bool} {y : Bool} -> (x ∧ y) ≡ true -> (y ≡ true)
 andElim2 {y = true} pf = refl
-andElim2 {x = x} {y = false} = {!!} --TODO fill this in, or replace this whole thing with the semi-ring solver
+andElim2 {true} {false} ()
+andElim2 {false} {false} ()
 
 andCombine : {x : Bool} {y : Bool} -> x ≡ true -> y ≡ true -> (x ∧ y) ≡ true
 andCombine {true} pfx pfy = pfy
@@ -279,8 +285,9 @@ accCorrect (.r1 + .r2) s .s1 s2  k
     in orLemma2 {acc r1 s k} {acc r2 s k} subCorrect
 accCorrect (.r *) [] ._ [] k _ (EmptyStarMatch {r}) kproof = kproof
 
-accCorrect {MaybeNull} (.r *) s .s1 s2  k  split1 (StarMatch {c1} {s1t'} {s2'} {s1} {spf} {r} subMatch1 subMatch2) kproof  = 
+accCorrect {MaybeNull} (.r *) (sh ∷ st ) .s1 s2  k  split1 (StarMatch {c1} {s1t'} {s2'} {s1} {spf} {r} subMatch1 subMatch2) kproof  = 
   let
+           s = (sh ∷ st )
            s1' = (c1 ∷ s1t')
            
            split2 : (s1' ++ s2') ≡ s1 
@@ -297,8 +304,10 @@ accCorrect {MaybeNull} (.r *) s .s1 s2  k  split1 (StarMatch {c1} {s1t'} {s2'} {
            subCorrect = accCorrect (r *) (s2' ++ s2) s2' s2 k refl subMatch2 kproof
            rightCorrect : acc r s (\cs' -> acc (r *) cs' k) ≡ true
            rightCorrect = accCorrect r s s1' (s2' ++ s2) (λ cs → acc (r *) cs k) transChain subMatch1 subCorrect
+           orCorrect : (k s ∨ acc r s (\cs' -> acc (r *) cs' k) ) ≡ true
+           orCorrect = orLemma2 {x = k s} rightCorrect
   --TODO pass in x and y explicitly
-  in orLemma2 rightCorrect --accCorrect r s s1' (s2' ++ s2) (\cs -> acc (r *) cs k) transChain
+  in orCorrect --accCorrect r s s1' (s2' ++ s2) (\cs -> acc (r *) cs k) transChain
     --subMatch1 (accCorrect (r *) (s2' ++ s2) s2' s2 k refl subMatch2 kproof)
 
 accCorrect (r *) (sh ∷ st) [] s2 k sp1 _ kproof = 
@@ -321,6 +330,8 @@ accCorrect ε (_ ∷ _ ) _ _ _ () _
 accCorrect _ [] (_ ∷ _ ) _ _ () _ _
 accCorrect _ [] _ (_ ∷ _ ) _ () _ _
 accCorrect (Lit _) [] _ _ _ () _ _
+accCorrect {._} (_* _) [] [] [] _ _
+             (StarMatch {_} {_} {_} {._} {()} {._} _ _) _ 
 --accCorrect _ _ _ _ _ _ _ _ = {!!} --This case should disappear when I finish star
 
 
@@ -347,7 +358,7 @@ accComplete (Lit c) (c1 ∷ srest) k accProof with (c Data.Char.≟ c1)
       charsEqual = eqProof
     in  Data.List.[ c ] , srest , cong (λ x → x ∷ srest) charsEqual , accProof , LitMatch c
 accComplete (Lit c) (c1 ∷ srest) k () | no _
-accComplete (r1 · r2) s k pf = 
+accComplete (_·_ {n1} {n2} r1  r2) s k pf = 
   let
     sub1 : acc r1 s (λ s' -> acc r2 s' k) ≡ true
     sub1 = pf
@@ -360,7 +371,7 @@ accComplete (r1 · r2) s k pf =
     subProof2 : s11 ++ s2' ≡ (s11 ++ s12) ++ s2 
     subProof2 = trans subProof1 localAssoc
     stringProof = trans (sym subProof2) psub1
-  in (s11 ++ s12 ) , s2 , stringProof , p2 , (ConcatMatch match1 match2)
+  in (s11 ++ s12 ) , s2 , stringProof , p2 , (ConcatMatch {spf = refl} match1 match2)
   
 accComplete (r1 + r2) s k accProof with (orCases accProof)
 ...  | inj₁ leftTrue  = 
@@ -371,10 +382,12 @@ accComplete (r1 + r2) s k accProof with (orCases accProof)
     s1 , s2 , p1 , p2 , match = accComplete r2 s k rightTrue
   in s1 , s2 , p1 , p2 , RightPlusMatch r1 match
 accComplete (r *) [] k pf =  [] , [] , refl , pf , EmptyStarMatch
-accComplete (r *) (sh ∷ st) k accProof with (orCases accProof)
+accComplete {MaybeNull} (r *) (sh ∷ st) k accProof with (orCases accProof)
 ... | inj₁ leftTrue  =  [] , (sh ∷ st) , refl , leftTrue , EmptyStarMatch
 ... | inj₂ rightTrue  =  
   let
+    rTest : RE NonNull
+    rTest = r
     s = sh ∷ st
     sub1 : acc r s (λ s' -> acc (r *) s' k) ≡ true
     sub1 = rightTrue
@@ -397,9 +410,11 @@ accComplete (r *) (sh ∷ st) k accProof with (orCases accProof)
     m1 = mySubst (λ str → REMatch str r) s11 (s11h ∷ s11t) (nonNullPf) match1 
     m2 : REMatch s12 (r *)
     m2 = match2
-    ourMatch : REMatch (s11 ++ s12) (r *)
-    ourMatch = StarMatch m1 m2
-  in (s11 ++ s12 ) , s2 , stringProof , p2 , ourMatch
+    newSpf : (s11h ∷ s11t) ++ s2' ≡ s11 ++ s2'
+    newSpf = {!!}
+    --ourMatch : REMatch (s11 ++ s12) (r *)
+    ourMatch = StarMatch {spf = newSpf} {r = rTest} m1 ? --m2
+  in (s11 ++ s12 ) , s2 , stringProof , p2 , {!!} --ourMatch
 accComplete ∅ _ _ ()
 accComplete (Lit _) [] _ ()
 
