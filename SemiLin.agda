@@ -120,10 +120,8 @@ vAssoc {suc n} {xh ∷ xt} {yh ∷ yt} {zh ∷ zt} =
 LinSet : ℕ -> Set
 LinSet n = (Parikh n) × (∃ λ (m : ℕ) → Vec (Parikh n) m )
 
---A type acting as a witness that a vector is in a linear set
-LinComb : {n : ℕ} -> Parikh n -> LinSet n -> Set
-LinComb {n} initV (base , m , vset)  = 
-  ∃ (λ (cs : Vec ℕ m) -> 
+applyLinComb : {n : ℕ} -> Parikh n -> (m : ℕ ) -> (Vec (Parikh n) m ) -> Vec ℕ m ->  Parikh n
+applyLinComb {n} base m vset cs   = 
     let 
       multFuns : Vec (Parikh n -> Parikh n) m
       multFuns = Data.Vec.map (λ (c : ℕ) → λ (v : Parikh n) → c ·ₛ v) cs
@@ -131,7 +129,13 @@ LinComb {n} initV (base , m , vset)  =
       scaledVecs = multFuns ⊛ vset
       comb : Parikh n
       comb = Data.Vec.foldr (\_ -> Parikh n) _+v_ v0 scaledVecs
-    in (base +v comb) ≡ initV )
+    in (base +v comb)
+
+
+--A type acting as a witness that a vector is in a linear set
+LinComb : {n : ℕ} -> Parikh n -> LinSet n -> Set
+LinComb {n} initV (base , m , vset)  = 
+  ∃ (λ (cs : Vec ℕ m) -> applyLinComb base m vset cs ≡ initV )
 
 --A semi-linear is a finite union of linear sets
 --We represent this using a list
@@ -168,11 +172,12 @@ slConcatRight v .(sh ∷ st) (InTail .v sh st inTail) sl2 = slExtend v (st Data.
 
 --Sum of each vector in a linear set
 _+l_ : {n : ℕ} -> LinSet n -> LinSet n -> LinSet n
-(base1 , m1 , vecs1 ) +l (base2 , m2 , vecs2 ) = 
+(base1 , m1 , vecs1 ) +l (base2 , m2 , vecs2 ) = (base1 +v base2 , m1 + m2 , vecs1 Data.Vec.++ vecs2 )
+{-
   let
     vecs = Data.Vec.concat (Data.Vec.map (λ v1 -> Data.Vec.map (λ v2 -> v1 +v v2  ) vecs1 ) vecs2)
   in base1 +v base2 , m2 * m1 , vecs
-
+-}
 
 --Sum each linear set in the two semi-linear sets
 _+s_ : {n : ℕ} -> SemiLinSet n -> SemiLinSet n -> SemiLinSet n
@@ -217,54 +222,61 @@ wordParikhPlus cmap (x ∷ u) v =
   let
     subSum : wordParikh cmap (u ++l v) ≡ (wordParikh cmap u) +v (wordParikh cmap v)
     subSum = wordParikhPlus cmap u v
-    charBasis : wordParikh cmap (x ∷ []) ≡ basis (cmap x)
-    charBasis = v0identRight
-    concatCons : x ∷ u ≡ (x ∷ [] ) ++l u
-    concatCons = refl
-    listConcat :  (x ∷ []) Data.List.++ ( (u Data.List.++ v) ) ≡ (x ∷ u) Data.List.++ v 
-    listConcat = refl
-    uv = u ++l v
-    puv = (wordParikh cmap u +v (wordParikh cmap v)) 
-    subLetterSum : (wordParikh cmap ((x ∷ []) ++l uv )) 
-      ≡ (wordParikh cmap (x ∷ [])) +v wordParikh cmap uv
-    subLetterSum = wordParikhPlus cmap (x ∷ []) uv
-    subX : (wordParikh cmap ( (x ∷ u) Data.List.++ v )) 
-      ≡ (wordParikh cmap (x ∷ [])) +v wordParikh cmap uv
-    subX = subst (λ y → wordParikh cmap y ≡ wordParikh cmap (x ∷ []) +v wordParikh cmap uv) listConcat subLetterSum
-    subUV : (wordParikh cmap ( (x ∷ u) Data.List.++ v )) 
-      ≡ (wordParikh cmap (x ∷ [])) +v puv
-    subUV = subst (λ y → wordParikh cmap ((x ∷ u) Data.List.++ v) ≡
-                           wordParikh cmap (x ∷ []) +v y) subSum subX
 
-    vecAssoc : (wordParikh cmap (x ∷ [])) +v (wordParikh cmap u +v (wordParikh cmap v)) 
-             ≡ (wordParikh cmap (x ∷ []) +v wordParikh cmap u) +v (wordParikh cmap v) 
-    vecAssoc = sym vAssoc 
-    uxSub : (wordParikh cmap ( (x ∷ u) Data.List.++ v )) 
-             ≡ (wordParikh cmap (x ∷ []) +v wordParikh cmap u) +v (wordParikh cmap v) 
-    uxSub  = trans subUV vecAssoc
-    uxPar :  wordParikh cmap (x ∷ u) ≡ wordParikh cmap (x ∷ []) +v wordParikh cmap u
-    uxPar = ? 
-  
-  in {!!}
+    subSumSub : basis (cmap x) +v  wordParikh cmap (u ++l v) ≡  
+              (basis (cmap x) +v (wordParikh cmap u +v wordParikh cmap v))
+    subSumSub = cong (λ y → basis (cmap x) +v y) subSum
+    afterAssoc : basis (cmap x) +v  wordParikh cmap (u ++l v) ≡  
+              (basis (cmap x) +v wordParikh cmap u) +v wordParikh cmap v
+    afterAssoc = subst (λ y → {!basis (cmap x) +v  wordParikh cmap (u ++l v) ≡ basis (cmap x) +v y!}) vAssoc subSumSub
+  in afterAssoc
     where
       _++l_ = Data.List._++_
+  
+  
 
 --Show that the sum of two vectors is in the sum of semilin sets containing them
 sumPreserved : 
   {n : ℕ} 
   -> (u : Parikh n) 
   -> (v : Parikh n)
-  -> (uv : Parikh n)
+  -- -> (uv : Parikh n)
   -> (su : SemiLinSet n) 
   -> (sv : SemiLinSet n)
-  -> (suv : SemiLinSet n)
-  -> (uv ≡ u +v v)
-  -> (suv ≡ su +s sv)
+  -- -> (suv : SemiLinSet n)
+  -- -> (uv ≡ u +v v)
+  -- -> (suv ≡ su +s sv)
   -> InSemiLin u su
   -> InSemiLin v sv
-  -> InSemiLin uv suv
-sumPreserved = {!!}
-
+  -> InSemiLin (u +v v) (su +s sv)
+sumPreserved {n} u v .(sh ∷ st) .(sh₁ ∷ st₁) (InHead .u sh st lcu) (InHead .v sh₁ st₁ lcv) =
+  let
+    su = (sh ∷ st)
+    sv = (sh₁ ∷ st₁)
+    (ubase , um , uvecs) = sh
+    (vbase , vm , vvecs) = sh₁
+    comb1 , pf1 = lcu
+    comb2 , pf2 = lcv
+    concatHead : (su +s sv) ≡ (sh +l sh₁) ∷ Data.List.map (_+l_ sh) st₁ Data.List.++
+                                              Data.List.foldr Data.List._++_ []
+                                              (Data.List.map (λ z → z +l sh₁ ∷ Data.List.map (_+l_ z) st₁) st) 
+    concatHead =  refl
+    ourComb : Vec ℕ (um + vm)
+    ourComb = comb1 Data.Vec.++ comb2
+  in InHead (u +v v) (sh +l sh₁) (Data.List.map (_+l_ sh) st₁ Data.List.++
+                                    Data.List.foldr Data.List._++_ []
+                                    (Data.List.map (λ z → z +l sh₁ ∷ Data.List.map (_+l_ z) st₁) st)) (ourComb , {!!})
+sumPreserved {n} u v .(sh ∷ st) .(sh₁ ∷ st₁) (InHead .u sh st x) (InTail .v sh₁ st₁ vIn) = 
+  let
+    subCall : InSemiLin (u +v v) ((sh ∷ st) +s st₁)
+    subCall = sumPreserved u v (sh ∷ st) st₁ (InHead u sh st x) vIn
+    sPlusDef : (sh ∷ st) +s (sh₁ ∷ st₁) ≡ {!!}
+    sPlusDef = refl
+  in {!!}  
+  
+sumPreserved u v .(sh ∷ st) .(sh₁ ∷ st₁) (InTail .u sh st uIn) (InTail .v sh₁ st₁ vIn) = {!!}
+sumPreserved u v .(sh ∷ st) sv (InTail .u sh st uIn) vIn = {!!}
+{-
 --Show that if two vectors are both in a semiLin set, then their sum is in that set
 --TODO this is wrong
 subPreserved2 :   {n : ℕ} 
@@ -277,6 +289,6 @@ subPreserved2 :   {n : ℕ}
   -> InSemiLin v sl
   -> InSemiLin uv sl
 subPreserved2 u v uv sl sumPf uInSemi vInSemi = {!!}
-
+-}
 
 
