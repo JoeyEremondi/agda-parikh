@@ -235,8 +235,16 @@ wordParikhPlus cmap (x ∷ u) v =
       ≡ (wordParikh cmap (x ∷ [])) +v puv
     subUV = subst (λ y → wordParikh cmap ((x ∷ u) Data.List.++ v) ≡
                            wordParikh cmap (x ∷ []) +v y) subSum subX
-     
-      
+
+    vecAssoc : (wordParikh cmap (x ∷ [])) +v (wordParikh cmap u +v (wordParikh cmap v)) 
+             ≡ (wordParikh cmap (x ∷ []) +v wordParikh cmap u) +v (wordParikh cmap v) 
+    vecAssoc = sym vAssoc 
+    uxSub : (wordParikh cmap ( (x ∷ u) Data.List.++ v )) 
+             ≡ (wordParikh cmap (x ∷ []) +v wordParikh cmap u) +v (wordParikh cmap v) 
+    uxSub  = trans subUV vecAssoc
+    uxPar :  wordParikh cmap (x ∷ u) ≡ wordParikh cmap (x ∷ []) +v wordParikh cmap u
+    uxPar = ? 
+  
   in {!!}
     where
       _++l_ = Data.List._++_
