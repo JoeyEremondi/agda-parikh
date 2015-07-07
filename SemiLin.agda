@@ -25,7 +25,7 @@ open import Data.Nat.Properties.Simple
 
 open import Data.Maybe
 open import Relation.Binary.PropositionalEquality
-
+open ≡-Reasoning
 
 open import Utils
 
@@ -37,12 +37,13 @@ open import Data.Sum
 
 import Data.Nat.Properties.Simple
 
+{-
 _≡⟨_⟩_ : ∀ {A : Set} (x : A) {y z : A} → x ≡ y → y ≡ z → x ≡ z
 x ≡⟨ refl ⟩ refl = refl
 
 _∎ : ∀ {A : Set} (x : A) → x ≡ x
 x ∎ = refl
-
+-}
 
 
 --The Parikh vector for a word is the count of occurrences of
@@ -77,22 +78,23 @@ v0identLeft {v = x ∷ v} =
 --Prove that vector addition is commutative
 v+-commut : {n : ℕ} -> (u : Parikh n) -> (v : Parikh n) -> (u +v v ≡ v +v u)
 v+-commut [] [] = refl
-v+-commut (x ∷ u) (y ∷ v) = 
-  let
-    natCommut : x + y ≡ y + x
-    natCommut = +-comm x y 
-    tailSame : u +v v ≡ v +v u
-    tailSame = v+-commut u v 
-  in subst (λ z → (x ∷ u) ≡ (z ∷ v)) natCommut (cong (λ t → x ∷ t) tailSame)
+v+-commut (x ∷ u) (y ∷ v) rewrite +-comm x y  | v+-commut u v = refl
 
 --Prove the right-identity for vector addition with 0
 --Just conbines commutativity and the left identity
 v0identRight : {n : ℕ} -> {v : Parikh n} -> v +v v0 ≡ v
-v0identRight {v = v} = trans (v+-commut v v0) v0identLeft
+v0identRight {v = v} = 
+  begin
+    v +v v0
+  ≡⟨ v+-commut v v0 ⟩
+    v0 +v v 
+  ≡⟨ v0identLeft ⟩ 
+    v ∎ 
 
 --
 
 --Prove that vector addition is associative
+--I couldn't figure out how to get this one working with rewrite
 vAssoc : {n : ℕ} -> {x : Parikh n} {y : Parikh n} {z : Parikh n}
   -> (x +v y) +v z ≡ x +v (y +v z) 
 vAssoc {zero} {[]} {[]} {[]} = refl
@@ -102,12 +104,19 @@ vAssoc {suc n} {xh ∷ xt} {yh ∷ yt} {zh ∷ zt} =
     y = yh ∷ yt
     z = zh ∷ zt
   in --_≡⟨_⟩_
-      ((x +v y) +v z) 
+      begin
+        (x +v y) +v z 
       ≡⟨ refl ⟩ 
-      ((xh + yh + zh ∷ (xt +v yt) +v zt) 
-      ≡⟨ subst (λ y₁ → xh + yh + zh ∷ (xt +v yt) +v zt ≡ y₁ ∷ xt +v (yt +v zt)) (+-assoc xh yh zh) (cong (λ y₁ → xh + yh + zh ∷ y₁) (vAssoc {n} {xt} {yt} {zt})) ⟩ 
-      ((xh + (yh + zh) ∷ xt +v (yt +v zt)) 
-      ≡⟨ refl ⟩ ((x +v (y +v z)) ∎)))
+        (xh + yh + zh) ∷ (xt +v yt) +v zt 
+      ≡⟨ cong (λ h → h ∷ (xt +v yt) +v zt) (+-assoc xh yh zh) ⟩ 
+        xh + (yh + zh) ∷ (xt +v yt) +v zt
+      ≡⟨ cong (λ t → xh + (yh + zh) ∷ t) vAssoc ⟩ 
+        (xh + (yh + zh) ∷ xt +v (yt +v zt)) 
+      ≡⟨ refl ⟩ 
+        x +v (y +v z) 
+      ∎
+
+--(λ y₁ → xh + yh + zh ∷ (xt +v yt) +v zt ≡ y₁ ∷ xt +v (yt +v zt))
 {-
     headSum = (xh + yh) + zh
     tailSum = (xt +v yt) +v zt
@@ -121,7 +130,7 @@ vAssoc {suc n} {xh ∷ xt} {yh ∷ yt} {zh ∷ zt} =
     tailAssoc = vAssoc {n} {xt} {yt} {zt}
     subAnswer1 : ((xh + yh) + zh) ∷ ((xt +v yt) +v zt) ≡ ((xh + yh) + zh) ∷ (xt +v (yt +v zt))
     subAnswer1 = cong (\y -> ((xh + yh) + zh) ∷ y) tailAssoc
-    subAnswer2 : ((xh + yh) + zh) ∷ ((xt +v yt) +v zt) ≡ (xh + (yh + zh)) ∷ (xt +v (yt +v zt))
+    suAbaganswer2 : ((xh + yh) + zh) ∷ ((xt +v yt) +v zt) ≡ (xh + (yh + zh)) ∷ (xt +v (yt +v zt))
     subAnswer2 = subst (λ y -> ((xh + yh) + zh) ∷ ((xt +v yt) +v zt) ≡ y ∷ (xt +v (yt +v zt)) ) normalAddAssoc subAnswer1
     subAnswer3 : (x +v y) +v z ≡ (xh + (yh + zh)) ∷ (xt +v (yt +v zt))
     subAnswer3 = trans topDivide subAnswer2
@@ -241,81 +250,17 @@ wordParikhPlus : {n : ℕ}
   -> (v : List Char)
   -> wordParikh cmap (u Data.List.++ v) ≡ (wordParikh cmap u) +v (wordParikh cmap v)
 wordParikhPlus cmap [] v = sym v0identLeft
-wordParikhPlus cmap (x ∷ u) v = 
-  let
-    subSum : wordParikh cmap (u ++l v) ≡ (wordParikh cmap u) +v (wordParikh cmap v)
-    subSum = wordParikhPlus cmap u v
-
-    subSumSub : basis (cmap x) +v  wordParikh cmap (u ++l v) ≡  
-              (basis (cmap x) +v (wordParikh cmap u +v wordParikh cmap v))
-    subSumSub = cong (λ y → basis (cmap x) +v y) subSum
-    afterAssoc : basis (cmap x) +v  wordParikh cmap (u ++l v) ≡  
-              (basis (cmap x) +v wordParikh cmap u) +v wordParikh cmap v
-    afterAssoc = subst (λ y → {!basis (cmap x) +v  wordParikh cmap (u ++l v) ≡ basis (cmap x) +v y!}) vAssoc subSumSub
-  in afterAssoc
+wordParikhPlus {n} cmap (x ∷ u) v  = 
+  begin
+    basis (cmap x) +v wordParikh cmap (u ++l v)
+  ≡⟨ cong (λ y → basis (cmap x) +v y) (wordParikhPlus cmap u v) ⟩ 
+    basis (cmap x) +v (wordParikh cmap u +v wordParikh cmap v) 
+  ≡⟨ sym vAssoc ⟩ 
+    ((basis (cmap x) +v wordParikh cmap u) +v wordParikh cmap v ∎)
     where
       _++l_ = Data.List._++_
   
   
 
---Show that the sum of two vectors is in the sum of SemiLinear sets containing them
-sumPreserved : 
-  {n : ℕ} 
-  -> (u : Parikh n) 
-  -> (v : Parikh n)
-  -- -> (uv : Parikh n)
-  -> (su : SemiLinSet n) 
-  -> (sv : SemiLinSet n)
-  -- -> (suv : SemiLinSet n)
-  -- -> (uv ≡ u +v v)
-  -- -> (suv ≡ su +s sv)
-  -> InSemiLin u su
-  -> InSemiLin v sv
-  -> InSemiLin (u +v v) (su +s sv)
-sumPreserved {n} u v .(sh ∷ st) .(sh₁ ∷ st₁) (InHead .u sh st lcu) (InHead .v sh₁ st₁ lcv) =
-  let
-    su = (sh ∷ st)
-    sv = (sh₁ ∷ st₁)
-    (ubase , um , uvecs) = sh
-    (vbase , vm , vvecs) = sh₁
-    comb1 , pf1 = lcu
-    comb2 , pf2 = lcv
-    concatHead : (su +s sv) ≡ (sh +l sh₁) ∷ Data.List.map (_+l_ sh) st₁ Data.List.++
-                                              Data.List.foldr Data.List._++_ []
-                                              (Data.List.map (λ z → z +l sh₁ ∷ Data.List.map (_+l_ z) st₁) st) 
-    concatHead =  refl
-    ourComb : Vec ℕ (um + vm)
-    ourComb = comb1 Data.Vec.++ comb2
-  in InHead (u +v v) (sh +l sh₁) (Data.List.map (_+l_ sh) st₁ Data.List.++
-                                    Data.List.foldr Data.List._++_ []
-                                    (Data.List.map (λ z → z +l sh₁ ∷ Data.List.map (_+l_ z) st₁) st)) (ourComb , {!!})
-sumPreserved {n} u v .(sh ∷ st) .(sh₁ ∷ st₁) (InHead .u sh st x) (InTail .v sh₁ st₁ vIn) = 
-  let
-    subCall : InSemiLin (u +v v) ((sh ∷ st) +s st₁)
-    subCall = sumPreserved u v (sh ∷ st) st₁ (InHead u sh st x) vIn
-    sPlusDef : (sh ∷ st) +s (sh₁ ∷ st₁) ≡ {!!}
-    sPlusDef = refl
-  in {!!}  
-  
-sumPreserved u v .(sh ∷ st) .(sh₁ ∷ st₁) (InTail .u sh st uIn) (InTail .v sh₁ st₁ vIn) =
-  let 
-    subCall : InSemiLin (u +v v) (st +s st₁)
-    subCall = sumPreserved u v st st₁ uIn vIn
-  in {!!}
-sumPreserved u v .(sh ∷ st) sv (InTail .u sh st uIn) vIn = {!!}
-{-
---Show that if two vectors are both in a semiLin set, then their sum is in that set
---TODO this is wrong
-subPreserved2 :   {n : ℕ} 
-  -> (u : Parikh n) 
-  -> (v : Parikh n)
-  -> (uv : Parikh n)
-  -> (sl : SemiLinSet n) 
-  -> (uv ≡ u +v v)
-  -> InSemiLin u sl
-  -> InSemiLin v sl
-  -> InSemiLin uv sl
-subPreserved2 u v uv sl sumPf uInSemi vInSemi = {!!}
--}
 
 
