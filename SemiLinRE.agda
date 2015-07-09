@@ -70,6 +70,7 @@ sumPreserved {n} u v .(sh ∷ st) .(sh₁ ∷ st₁) (InHead .u sh st lcu) (InHe
   in InHead (u +v v) (sh +l sh₁) (Data.List.map (_+l_ sh) st₁ Data.List.++
                                     Data.List.foldr Data.List._++_ []
                                     (Data.List.map (λ z → z +l sh₁ ∷ Data.List.map (_+l_ z) st₁) st)) (ourComb , {!!})
+
 sumPreserved {n} u v .(sh ∷ st) .(sh₁ ∷ st₁) (InHead .u sh st x) (InTail .v sh₁ st₁ vIn) = 
   let
     subCall : InSemiLin (u +v v) ((sh ∷ st) +s st₁)
@@ -231,7 +232,7 @@ reParikhCorrect cmap (r1 RETypes.· r2) .s3 (RETypes.ConcatMatch {s1 = s1} {s2 =
     semiIsSum = sym lpf
 
     inSum1 : InSemiLin ((wordParikh cmap s1) +v (wordParikh cmap s2) ) (leftParikh +s rightParikh )
-    inSum1 = ? -- sumPreserved (wordParikh cmap s1) (wordParikh cmap s2) (wordParikh cmap s1 +v wordParikh cmap s2) leftParikh rightParikh (leftParikh +s rightParikh) refl refl leftInSemi rightInSemi 
+    inSum1 = {!!} -- sumPreserved (wordParikh cmap s1) (wordParikh cmap s2) (wordParikh cmap s1 +v wordParikh cmap s2) leftParikh rightParikh (leftParikh +s rightParikh) refl refl leftInSemi rightInSemi 
 
     inSum2 : InSemiLin wordPar (leftParikh +s rightParikh )
     inSum2 = subst (λ x → InSemiLin x (leftParikh +s rightParikh)) eqChain2 inSum1

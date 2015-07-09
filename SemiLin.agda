@@ -116,6 +116,14 @@ vAssoc {suc n} {xh ∷ xt} {yh ∷ yt} {zh ∷ zt} =
         x +v (y +v z) 
       ∎
 
+-- Wouter: here's one definition using rewrite...
+vAssoc2 : {n : ℕ} -> {x : Parikh n} {y : Parikh n} {z : Parikh n}
+  -> (x +v y) +v z ≡ x +v (y +v z) 
+vAssoc2 {x = []} {[]} {[]} = refl
+vAssoc2 {x = x ∷ xs} {y ∷ ys} {z ∷ zs} rewrite +-assoc x y z | vAssoc {x = xs} {y = ys} {z = zs} 
+  = refl
+
+
 --(λ y₁ → xh + yh + zh ∷ (xt +v yt) +v zt ≡ y₁ ∷ xt +v (yt +v zt))
 {-
     headSum = (xh + yh) + zh
@@ -146,11 +154,21 @@ vAssoc {suc n} {xh ∷ xt} {yh ∷ yt} {zh ∷ zt} =
 --And a set of m vectors v1 ... vm.
 --A vector u is in a linear set if there exists constants c1 ... cm
 --such that u = b + c1·v1 + ... + cm·vm 
+
+-- Wouter -- do you really want to existentially quantify m?
+-- You could also define LinSet n m = Parikh n × Vec (Parikh n) m
+--  I don' think it makes a whole lot of difference, but later on in applyLinCom
+--  you use this anyway.
+--  For what it's worth, you may want to note that ∃ n . Vec a n is isomorphic to List a
 LinSet : ℕ -> Set
 LinSet n = (Parikh n) × (∃ λ (m : ℕ) → Vec (Parikh n) m )
 
 --Given an offset vector, a set of m Parikh vectors, and a set of m constants
 --Return b + c1·v1 + ... + cm·vm
+-- Wouter: you might want to consider defining this directly by recursion over the 
+--  cs and vset. The induction you use in this definition will determine how easy/hard
+--  it might be to reason about this function later.
+--  See the proof of sumPreserved in SemiLinRE, for instance.
 applyLinComb : {n : ℕ} -> Parikh n -> (m : ℕ ) -> (Vec (Parikh n) m ) -> Vec ℕ m ->  Parikh n
 applyLinComb {n} base m vset cs   = 
     let 
