@@ -168,26 +168,9 @@ reParikhCorrect :
   -> (langParikh : SemiLinSet n)
   -> (langParikh ≡ reSemiLin cmap r )
   -> (InSemiLin wordPar langParikh ) 
-reParikhCorrect cmap .RETypes.ε .[] RETypes.EmptyMatch wordPar wpf langParikh lpf = 
-  let
-    emptyWordPar : wordPar ≡ v0
-    emptyWordPar = trans (sym wpf) refl
-    emptyLangPf : (( v0 , 0 , [] ) ∷ []) ≡ langParikh
-    emptyLangPf = sym lpf
-    zeroSelf : v0 +v v0 ≡ v0
-    zeroSelf = v0identLeft
-    inSemi : InSemiLin wordPar (( v0 , 0 , [] ) ∷ [] )
-    inSemi = InHead wordPar (v0 , zero , []) [] (v0 , {!!})
-  in subst (λ x → InSemiLin wordPar x) emptyLangPf inSemi
-reParikhCorrect cmap .(RETypes.Lit c) .(c ∷ []) (RETypes.LitMatch c) wordPar wpf langParikh lpf =
-  let
-    basisPf : wordPar ≡ (basis (cmap c))
-    basisPf = trans (sym wpf) (trans refl v0identRight)
-    basisSemiPf : langParikh ≡ Data.List.[ (basis (cmap c)) , 0 , []  ]
-    basisSemiPf = lpf
-    inSemi : InSemiLin wordPar (( (basis (cmap c)) , 0 , [] ) ∷ [] )
-    inSemi = InHead wordPar (basis (cmap c) , 0 , []) [] (v0 , {!!})
-  in subst (λ x → InSemiLin wordPar x) (sym basisSemiPf) inSemi
+reParikhCorrect cmap .RETypes.ε .[] RETypes.EmptyMatch .v0 refl .((v0 , 0 , []) ∷ []) refl = InHead v0 (v0 , zero , []) [] ([] , refl) 
+reParikhCorrect cmap .(RETypes.Lit c) .(c ∷ []) (RETypes.LitMatch c) .(basis (cmap c) +v v0) refl .((basis (cmap c) , 0 , []) ∷ []) refl = 
+  InHead (basis (cmap c) +v v0) (basis (cmap c) , zero , []) [] (subst (λ x → LinComb x (basis (cmap c) , zero , [])) (sym v0identRight) (v0 , (v0apply (basis (cmap c)) []))) 
 reParikhCorrect cmap (r1 RETypes.+ .r2) w (RETypes.LeftPlusMatch r2 match) wordPar wpf langParikh lpf =
   let
     leftParikh = reSemiLin cmap r1
@@ -249,35 +232,6 @@ reParikhCorrect cmap (r RETypes.*) [] RETypes.EmptyStarMatch .v0 refl .(concatLi
     v0 +v v0 
     ≡⟨ v0identLeft ⟩ 
     (v0 ∎)))
-{-
-reParikhCorrect cmap (r RETypes.*) []  (RETypes.EmptyStarMatch) wordPar wpf langParikh lpf with reSemiLin cmap r | langParikh
-reParikhCorrect cmap (r RETypes.*) [] RETypes.EmptyStarMatch wordPar wpf langParikh () | w | [] 
-reParikhCorrect cmap (r RETypes.*) [] RETypes.EmptyStarMatch .v0 refl langParikh refl | [] | .(v0 , 0 , []) ∷ .[] = InHead v0 (v0 , zero , []) [] ([] , refl)
-reParikhCorrect cmap (r RETypes.*) [] RETypes.EmptyStarMatch .v0 refl langParikh refl | (sbase , sm , svecs) ∷ subParTail | (.v0 , .(suc (sm + proj₁ (proj₂ (concatLinSets subParTail)))) , .(sbase ∷ svecs Data.Vec.++ proj₂ (proj₂ (concatLinSets subParTail)))) ∷ .[] = {!!}
--}
-{- 
-  let
-    parIs0a : wordParikh cmap [] ≡ v0
-    parIs0a = refl
-    parIs0 : wordPar ≡ v0
-    parIs0 = trans (sym wpf) parIs0a
-    
-    m = Data.List.length parTail
-
-    --newLPF : (v0 , suc m ,  parFirst ∷ parTail) ≡ concatLinSets (subParFirst ∷ subParTail) 
-    newLPF = {!!} -- trans lpf mapFirst
-
-    pbase , pm , pvecs = subParFirst
-
-    headPf : parFirst ≡ (v0 , suc pm , pbase ∷ pvecs)
-    headPf = listHeadEq newLPF
-
-    emptyLinComb : LinComb v0 parFirst
-    emptyLinComb = v0 , {!!} --TODO prove that v0 dot anything is v0
-   
-
-  in InHead wordPar parFirst parTail (subst (λ x → LinComb x parFirst) (sym parIs0) emptyLinComb)
--}
 reParikhCorrect cmap (r RETypes.*) w (RETypes.StarMatch {c1} {s1t} {s2} {.w} {spf} {.r} match match₁) .(wordParikh cmap w) refl .(concatLinSets (reSemiLin cmap r) ∷ []) refl = 
 
   let
