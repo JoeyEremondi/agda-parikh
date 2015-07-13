@@ -67,6 +67,10 @@ v0 : {n : ℕ} -> Parikh n
 v0 {zero} = []
 v0 {suc n} = 0 ∷ v0
 
+scalar0ident : {n : ℕ} -> (v : Parikh n ) -> 0 ·ₛ v ≡ v0
+scalar0ident [] = refl
+scalar0ident (x ∷ v) = cong (_∷_ zero) (scalar0ident v)  
+
 --Prove that 0 is a neutral element on the left
 v0identLeft : {n : ℕ} -> {v : Parikh n} -> v0 +v v ≡ v
 v0identLeft {v = []} = refl
@@ -170,16 +174,8 @@ LinSet n = (Parikh n) × (∃ λ (m : ℕ) → Vec (Parikh n) m )
 --  it might be to reason about this function later.
 --  See the proof of sumPreserved in SemiLinRE, for instance.
 applyLinComb : {n : ℕ} -> Parikh n -> (m : ℕ ) -> (Vec (Parikh n) m ) -> Vec ℕ m ->  Parikh n
-applyLinComb {n} base m vset cs   = 
-    let 
-      multFuns : Vec (Parikh n -> Parikh n) m
-      multFuns = Data.Vec.map (λ (c : ℕ) → λ (v : Parikh n) → c ·ₛ v) cs
-      scaledVecs : Vec (Parikh n) m
-      scaledVecs = multFuns ⊛ vset
-      comb : Parikh n
-      comb = Data.Vec.foldr (\_ -> Parikh n) _+v_ v0 scaledVecs
-    in (base +v comb)
-
+applyLinComb base .0 [] cs = base
+applyLinComb base (suc m) (firstVec ∷ vset) (firstConst ∷ cs) = (firstConst ·ₛ firstVec) +v (applyLinComb base m vset cs)
 
 --A type acting as a witness that a vector is in a linear set
 LinComb : {n : ℕ} -> Parikh n -> LinSet n -> Set

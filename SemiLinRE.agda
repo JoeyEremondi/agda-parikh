@@ -179,7 +179,7 @@ reParikhCorrect cmap .RETypes.ε .[] RETypes.EmptyMatch wordPar wpf langParikh l
     zeroSelf : v0 +v v0 ≡ v0
     zeroSelf = v0identLeft
     inSemi : InSemiLin wordPar (( v0 , 0 , [] ) ∷ [] )
-    inSemi = InHead wordPar (v0 , zero , []) [] (v0 , trans zeroSelf (sym emptyWordPar))
+    inSemi = InHead wordPar (v0 , zero , []) [] (v0 , {!!})
   in subst (λ x → InSemiLin wordPar x) emptyLangPf inSemi
 reParikhCorrect cmap .(RETypes.Lit c) .(c ∷ []) (RETypes.LitMatch c) wordPar wpf langParikh lpf =
   let
@@ -188,7 +188,7 @@ reParikhCorrect cmap .(RETypes.Lit c) .(c ∷ []) (RETypes.LitMatch c) wordPar w
     basisSemiPf : langParikh ≡ Data.List.[ (basis (cmap c)) , 0 , []  ]
     basisSemiPf = lpf
     inSemi : InSemiLin wordPar (( (basis (cmap c)) , 0 , [] ) ∷ [] )
-    inSemi = InHead wordPar (basis (cmap c) , 0 , []) [] (v0 , sym (trans basisPf (sym v0identRight)))
+    inSemi = InHead wordPar (basis (cmap c) , 0 , []) [] (v0 , {!!})
   in subst (λ x → InSemiLin wordPar x) (sym basisSemiPf) inSemi
 reParikhCorrect cmap (r1 RETypes.+ .r2) w (RETypes.LeftPlusMatch r2 match) wordPar wpf langParikh lpf =
   let
@@ -326,21 +326,16 @@ reParikhComplete : {n : ℕ} -> {null? : RETypes.Null?}
   -> langParikh ≡ (reSemiLin cmap r )
   -> (InSemiLin v langParikh )
   -> ∃ (λ w -> (v ≡ wordParikh cmap w) × (RETypes.REMatch w r) ) 
-reParikhComplete cmap RETypes.ε .(v0 +v v0) .((v0 , 0 , []) ∷ []) refl (InHead .(v0 +v v0) .(v0 , 0 , []) .[] (combVec , refl)) = 
-  [] , (v0identLeft , RETypes.EmptyMatch)
+reParikhComplete cmap RETypes.ε .v0 .((v0 , 0 , []) ∷ []) refl (InHead .v0 .(v0 , 0 , []) .[] (combConsts , refl)) = [] , refl , RETypes.EmptyMatch
+reParikhComplete cmap RETypes.ε v .((v0 , 0 , []) ∷ []) refl (InTail .v .(v0 , 0 , []) .[] ())
 
-reParikhComplete cmap  RETypes.ε v .(sh ∷ st) lpf (InTail .v sh st inSemi) = {!!}
+--reParikhComplete cmap  RETypes.ε v .(sh ∷ st) lpf (InTail .v sh st inSemi) = {!!}
 reParikhComplete cmap  RETypes.∅ v [] lpf ()
 reParikhComplete cmap  RETypes.∅ v (h ∷ t) () inSemi 
-reParikhComplete 
-  cmap 
-  (RETypes.Lit x) 
-  .(basis (cmap x) +v v0) 
-  .((basis (cmap x) , 0 , []) ∷ []) 
-  refl 
-  (InHead .(basis (cmap x) +v v0) .(basis (cmap x) , 0 , []) .[] (combVecs , refl)) = 
-    (x ∷ []) , (refl , RETypes.LitMatch x)
+reParikhComplete cmap (RETypes.Lit x) langParikh [] inSemi ()
+reParikhComplete cmap (RETypes.Lit x) .(basis (cmap x)) .((basis (cmap x) , 0 , []) ∷ []) refl (InHead .(basis (cmap x)) .(basis (cmap x) , 0 , []) .[] (consts , refl)) = (x ∷ []) , (sym v0identRight , RETypes.LitMatch x)
 reParikhComplete cmap (RETypes.Lit x) v .((basis (cmap x) , 0 , []) ∷ []) refl (InTail .v .(basis (cmap x) , 0 , []) .[] ())
+--reParikhComplete cmap (RETypes.Lit x) v .((basis (cmap x) , 0 , []) ∷ []) refl (InTail .v .(basis (cmap x) , 0 , []) .[] ())
 reParikhComplete {null? = null?} cmap  (r1 RETypes.+ r2) v langParikh lpf inSemi with inSemiConcat v (reSemiLin cmap r1) (reSemiLin cmap r2) langParikh (sym (trans lpf refl)) inSemi
 ... | inj₁ in1 =  
   let
