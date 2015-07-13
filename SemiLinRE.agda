@@ -37,6 +37,8 @@ open import Data.Sum
 
 open import SemiLin
 
+open import Data.Vec.Equality
+
 
 
 --Show that the sum of two vectors is in the sum of SemiLinear sets containing them
@@ -362,4 +364,6 @@ reParikhComplete cmap (r1 RETypes.· r2) v ._ refl inSemi =
   in leftW Data.List.++ rightW ,
      {!!} , {!!} --(trans {!!} {!!} , (RETypes.ConcatMatch leftMatch rightMatch))
 
-reParikhComplete cmap  (r RETypes.*) v w lpf inSemi = {!!}
+reParikhComplete cmap (r RETypes.*) v .(concatLinSets (reSemiLin cmap r) ∷ []) refl (InHead .v .(concatLinSets (reSemiLin cmap r)) .[] (combVecs , combPf)) with v0 Data.Vec.Equality.DecidableEquality.≟ v0
+... | vEq = {!!}
+reParikhComplete cmap (r RETypes.*) v .(concatLinSets (reSemiLin cmap r) ∷ []) refl (InTail .v .(concatLinSets (reSemiLin cmap r)) .[] ())

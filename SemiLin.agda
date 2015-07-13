@@ -52,6 +52,12 @@ x ∎ = refl
 Parikh : ℕ -> Set
 Parikh n = Vec ℕ n
 
+checkVecEq : {n : ℕ} -> (u : Parikh n) -> (v : Parikh n) -> (u ≡ v) ⊎ ℕ -- TODO unit type?
+checkVecEq [] [] = inj₁ refl
+checkVecEq (x ∷ u) (y ∷ v) with checkVecEq u v
+... | inj₂ _ = inj₂ 0
+... | inj₁ pf = inj₂ y 
+
 --Scalar multiplication
 _·ₛ_ : {n : ℕ} -> ℕ -> Parikh n -> Parikh n
 c ·ₛ [] = []
@@ -176,6 +182,11 @@ LinSet n = (Parikh n) × (∃ λ (m : ℕ) → Vec (Parikh n) m )
 applyLinComb : {n : ℕ} -> Parikh n -> (m : ℕ ) -> (Vec (Parikh n) m ) -> Vec ℕ m ->  Parikh n
 applyLinComb base .0 [] cs = base
 applyLinComb base (suc m) (firstVec ∷ vset) (firstConst ∷ cs) = (firstConst ·ₛ firstVec) +v (applyLinComb base m vset cs)
+
+v0apply : {n m : ℕ} -> (base : Parikh n) -> (vecs : Vec (Parikh n) m ) -> applyLinComb base m  vecs (v0 {m}) ≡ base 
+v0apply base [] = refl
+v0apply {n} {suc m} base (x ∷ vecs) rewrite scalar0ident x | v0apply base vecs = v0identLeft
+
 
 --A type acting as a witness that a vector is in a linear set
 LinComb : {n : ℕ} -> Parikh n -> LinSet n -> Set
