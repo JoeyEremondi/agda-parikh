@@ -25,7 +25,7 @@ open import Data.Nat.Properties.Simple
 
 open import Data.Maybe
 open import Relation.Binary.PropositionalEquality
-
+open ≡-Reasoning
 
 open import Utils
 
@@ -47,10 +47,16 @@ row (x ∷ xs) y = (x , y) ∷ row xs y
 allPairs : ∀ {A} -> {m n : ℕ} -> Vec A m -> Vec A n -> Vec (A × A) (n * m) 
 allPairs xarg [] = []
 allPairs xarg (y ∷ yarg) = row xarg y Data.Vec.++ allPairs xarg yarg
+
+rowWitness : ∀ {A} -> {m : ℕ} -> (xv : Vec A m) -> (x : A) -> (y : A) -> x ∈ xv -> (x , y ) ∈ row xv y
+rowWitness ._ x y here = here
+rowWitness ._ x y (there xIn) = there (rowWitness _ x y xIn)
     
 pairWitness : ∀ {A} -> {m n : ℕ} -> (xv : Vec A m) -> (yv : Vec A n) -> (x : A) -> (y : A) -> x ∈ xv -> y ∈ yv -> (x , y ) ∈ allPairs xv yv
 pairWitness ._ ._ x y here here = here
-pairWitness ._ ._ x y (there inx) here = there (pairWitness _ _ x y inx here)
+pairWitness ._ ._ x y (there inx) here = {!!}
+--... | here  = {!!}
+--... | there rw = ?
 pairWitness xv ._ x y inx (there iny) = {!!}
 
 inConcat : {n : ℕ} -> (v : Parikh n) -> (su : SemiLinSet n) -> (sv : SemiLinSet n) -> InSemiLin v (su Data.List.++ sv) -> (InSemiLin v su) ⊎ (InSemiLin v sv)
@@ -229,10 +235,27 @@ reParikhCorrect cmap (r1 RETypes.· r2) .s3 (RETypes.ConcatMatch {s1 = s1} {s2 =
     inSum2 : InSemiLin wordPar (leftParikh +s rightParikh )
     inSum2 = subst (λ x → InSemiLin x (leftParikh +s rightParikh)) eqChain2 inSum1
   in subst (λ x → InSemiLin wordPar x) semiIsSum inSum2
+reParikhCorrect cmap (r RETypes.*) [] RETypes.EmptyStarMatch .v0 refl .(concatLinSets (reSemiLin cmap r) ∷ []) refl with (reSemiLin cmap r) 
+reParikhCorrect cmap (r RETypes.*) [] RETypes.EmptyStarMatch .v0 refl .(concatLinSets (reSemiLin cmap r) ∷ []) refl | []  = InHead v0 (concatLinSets []) [] (v0 , refl) 
+reParikhCorrect cmap (r RETypes.*) [] RETypes.EmptyStarMatch .v0 refl .(concatLinSets ((xb , xm , xv ) ∷ rsl) ∷ []) refl | (xb , xm , xv ) ∷ rsl =
+ InHead v0 (concatLinSets ((xb , xm , xv) ∷ rsl)) [] (v0 , 
+    (begin 
+      (0 ·ₛ xb) +v
+        applyLinComb v0 (xm + proj₁ (proj₂ (concatLinSets rsl)))
+        (xv Data.Vec.++ proj₂ (proj₂ (concatLinSets rsl))) v0 
+    ≡⟨ cong (λ x → (0 ·ₛ xb) +v x) (v0apply v0 (xv Data.Vec.++ proj₂ (proj₂ (concatLinSets rsl)))) ⟩ 
+    (0 ·ₛ xb) +v v0 
+    ≡⟨ cong (λ x → x +v v0) (scalar0ident xb) ⟩ 
+    v0 +v v0 
+    ≡⟨ v0identLeft ⟩ 
+    (v0 ∎)))
+{-
 reParikhCorrect cmap (r RETypes.*) []  (RETypes.EmptyStarMatch) wordPar wpf langParikh lpf with reSemiLin cmap r | langParikh
-reParikhCorrect cmap (r RETypes.*) []  (RETypes.EmptyStarMatch) wordPar wpf langParikh lpf | _ | [] = {!!} --TODO show this case impossible
-reParikhCorrect  cmap (r RETypes.*) []  (RETypes.EmptyStarMatch) wordPar wpf langParikh lpf | [] | _ ∷ _ = {!!} --TODO show this case impossible
-... | subParFirst ∷ subParTail | parFirst ∷ parTail  = 
+reParikhCorrect cmap (r RETypes.*) [] RETypes.EmptyStarMatch wordPar wpf langParikh () | w | [] 
+reParikhCorrect cmap (r RETypes.*) [] RETypes.EmptyStarMatch .v0 refl langParikh refl | [] | .(v0 , 0 , []) ∷ .[] = InHead v0 (v0 , zero , []) [] ([] , refl)
+reParikhCorrect cmap (r RETypes.*) [] RETypes.EmptyStarMatch .v0 refl langParikh refl | (sbase , sm , svecs) ∷ subParTail | (.v0 , .(suc (sm + proj₁ (proj₂ (concatLinSets subParTail)))) , .(sbase ∷ svecs Data.Vec.++ proj₂ (proj₂ (concatLinSets subParTail)))) ∷ .[] = {!!}
+-}
+{- 
   let
     parIs0a : wordParikh cmap [] ≡ v0
     parIs0a = refl
@@ -254,7 +277,7 @@ reParikhCorrect  cmap (r RETypes.*) []  (RETypes.EmptyStarMatch) wordPar wpf lan
    
 
   in InHead wordPar parFirst parTail (subst (λ x → LinComb x parFirst) (sym parIs0) emptyLinComb)
-
+-}
 reParikhCorrect cmap (r RETypes.*) w (RETypes.StarMatch {c1} {s1t} {s2} {.w} {spf} {.r} match match₁) .(wordParikh cmap w) refl .(concatLinSets (reSemiLin cmap r) ∷ []) refl = 
 
   let
