@@ -52,12 +52,6 @@ x ∎ = refl
 Parikh : ℕ -> Set
 Parikh n = Vec ℕ n
 
-checkVecEq : {n : ℕ} -> (u : Parikh n) -> (v : Parikh n) -> (u ≡ v) ⊎ ℕ -- TODO unit type?
-checkVecEq [] [] = inj₁ refl
-checkVecEq (x ∷ u) (y ∷ v) with checkVecEq u v
-... | inj₂ _ = inj₂ 0
-... | inj₁ pf = inj₂ y 
-
 --Scalar multiplication
 _·ₛ_ : {n : ℕ} -> ℕ -> Parikh n -> Parikh n
 c ·ₛ [] = []
