@@ -71,14 +71,14 @@ sumPreserved {n} u v .(sh ∷ st) .(sh₁ ∷ st₁) (InHead .u sh st lcu) (InHe
                                     Data.List.foldr Data.List._++_ []
                                     (Data.List.map (λ z → z +l sh₁ ∷ Data.List.map (_+l_ z) st₁) st)) (ourComb , {!!})
 
-sumPreserved {n} u v .(sh ∷ st) .(sh₁ ∷ st₁) (InHead .u sh st x) (InTail .v sh₁ st₁ vIn) = 
-  let
+sumPreserved {n} u v .(sh ∷ st) .(sh₁ ∷ st₁) (InHead .u sh st linComb) (InTail .v sh₁ st₁ vIn) = {!!} 
+{-  let
     subCall : InSemiLin (u +v v) ((sh ∷ st) +s st₁)
-    subCall = sumPreserved u v (sh ∷ st) st₁ (InHead u sh st x) vIn
+    subCall = sumPreserved u v (sh ∷ st) st₁ (InHead u sh st linComb) vIn
     sPlusDef : (sh ∷ st) +s (sh₁ ∷ st₁) ≡ {!!}
     sPlusDef = refl
   in {!!}  
-  
+-}  
 sumPreserved u v .(sh ∷ st) .(sh₁ ∷ st₁) (InTail .u sh st uIn) (InTail .v sh₁ st₁ vIn) =
   let 
     subCall : InSemiLin (u +v v) (st +s st₁)
@@ -263,7 +263,8 @@ reParikhCorrect  cmap (r RETypes.*) []  (RETypes.EmptyStarMatch) wordPar wpf lan
 
   in InHead wordPar parFirst parTail (subst (λ x → LinComb x parFirst) (sym parIs0) emptyLinComb)
 
-reParikhCorrect {n} cmap (r RETypes.*) w (RETypes.StarMatch {c1 = c1} {s1t = s1t} {s2 = s2} match match₁) wordPar wpf langParikh lpf =
+reParikhCorrect cmap (r RETypes.*) w (RETypes.StarMatch {c1} {s1t} {s2} {.w} {spf} {.r} match match₁) .(wordParikh cmap w) refl .(concatLinSets (reSemiLin cmap r) ∷ []) refl = 
+
   let
     subPar = reSemiLin cmap r
     firstMatchPar = wordParikh cmap (c1 ∷ s1t)
@@ -271,8 +272,8 @@ reParikhCorrect {n} cmap (r RETypes.*) w (RETypes.StarMatch {c1 = c1} {s1t = s1t
     inSubPar = reParikhCorrect cmap r (c1 ∷ s1t) match firstMatchPar refl subPar refl
 
     secondMatchPar = wordParikh cmap s2
-    inSubPar2 : InSemiLin secondMatchPar langParikh
-    inSubPar2 = reParikhCorrect cmap (r RETypes.*) s2 match₁ secondMatchPar refl langParikh lpf
+    inSubPar2 : InSemiLin secondMatchPar (concatLinSets (reSemiLin cmap r) ∷ [])
+    inSubPar2 = reParikhCorrect cmap (r RETypes.*) s2 match₁ secondMatchPar refl (concatLinSets (reSemiLin cmap r) ∷ []) refl
 
     --subPar and langParikh should be paralell, 
     --each lin set in langParikh is just a constant multiplied by
@@ -280,8 +281,8 @@ reParikhCorrect {n} cmap (r RETypes.*) w (RETypes.StarMatch {c1 = c1} {s1t = s1t
     --This function iterates to find the corresponding pair
 
     --Idea: show that s1's parikh is in langParikh. Then, we know s2's parikh is in langParikh, so we show their sum is in langParikh
-    newSemiMatch : InSemiLin firstMatchPar langParikh
-    newSemiMatch = {!!} --findConstMultMatch firstMatchPar subPar langParikh lpf inSubPar
+    --newSemiMatch : InSemiLin firstMatchPar langParikh
+    --newSemiMatch = {!!} --findConstMultMatch firstMatchPar subPar langParikh lpf inSubPar
     
   in {!!}
 
@@ -325,37 +326,9 @@ reParikhComplete : {n : ℕ} -> {null? : RETypes.Null?}
   -> langParikh ≡ (reSemiLin cmap r )
   -> (InSemiLin v langParikh )
   -> ∃ (λ w -> (v ≡ wordParikh cmap w) × (RETypes.REMatch w r) ) 
-reParikhComplete {n} cmap RETypes.ε v .(sh ∷ st) lpf (InHead .v sh st linComb) =
-  let
-    (sh1 , sh2 , sh3) = sh
+reParikhComplete cmap RETypes.ε .(v0 +v v0) .((v0 , 0 , []) ∷ []) refl (InHead .(v0 +v v0) .(v0 , 0 , []) .[] (combVec , refl)) = 
+  [] , (v0identLeft , RETypes.EmptyMatch)
 
-    emptyPar : (reSemiLin cmap RETypes.ε ) ≡ (v0 , zero , []) ∷ []
-    emptyPar = refl
-    emptySh : sh ≡ (v0 , zero , [])
-    emptySh = listHeadEq lpf
-    ( consts , combPf ) = linComb
-    test : {!!} ≡ combPf
-    test = {!!}
-    combVec = (Data.Vec.foldr (λ _ → Parikh n) (λ {n} → _+v_) v0 (Data.Vec.replicate _·ₛ_ ⊛ proj₁ linComb ⊛ proj₂ (proj₂ sh)))
-
-    sub1 : sh2 ≡ zero
-    sub1 = cong (proj₁ ∘ proj₂) emptySh
-
-    emptyVecSub : Vec (Parikh n) sh2
-    emptyVecSub = subst (λ x → Vec (Parikh n) x) (sym sub1) []
-
-    subTypesEq : Vec (Parikh n) zero ≡ Vec (Parikh n) sh2
-    subTypesEq = cong (λ x → Vec (Parikh n) x) (sym sub1)
-
-    sub2 : (sh2 , sh3) ≡ (zero , [])
-    sub2 = cong (proj₂ ) emptySh
-
-
-    expandComb1 : v0 +v combVec ≡ v
-    expandComb1 = subst (λ x → x +v combVec ≡ v) (cong proj₁ emptySh) combPf
-    
-
-  in [] , {!!} , RETypes.EmptyMatch
 reParikhComplete cmap  RETypes.ε v .(sh ∷ st) lpf (InTail .v sh st inSemi) = {!!}
 reParikhComplete cmap  RETypes.∅ v [] lpf ()
 reParikhComplete cmap  RETypes.∅ v (h ∷ t) () inSemi 
@@ -368,10 +341,6 @@ reParikhComplete
   (InHead .(basis (cmap x) +v v0) .(basis (cmap x) , 0 , []) .[] (combVecs , refl)) = 
     (x ∷ []) , (refl , RETypes.LitMatch x)
 reParikhComplete cmap (RETypes.Lit x) v .((basis (cmap x) , 0 , []) ∷ []) refl (InTail .v .(basis (cmap x) , 0 , []) .[] ())
---  let
---    litParPf : langParikh ≡ ((basis (cmap x)) , (0 , [])) ∷ [] --basis (cmap x)
---    litParPf = lpf
---  in (x ∷ []) , {!!}
 reParikhComplete {null? = null?} cmap  (r1 RETypes.+ r2) v langParikh lpf inSemi with inSemiConcat v (reSemiLin cmap r1) (reSemiLin cmap r2) langParikh (sym (trans lpf refl)) inSemi
 ... | inj₁ in1 =  
   let
@@ -381,24 +350,21 @@ reParikhComplete {null? = null?} cmap  (r1 RETypes.+ r2) v langParikh lpf inSemi
   let
     (subw , subPf , subMatch) = reParikhComplete cmap  r2 v (reSemiLin cmap r2) refl in2
   in subw , (subPf , (RETypes.RightPlusMatch r1 subMatch))
-reParikhComplete cmap  (r1 RETypes.· r2) v langParikh lpf inSemi = 
+reParikhComplete cmap (r1 RETypes.· r2) v ._ refl inSemi = 
   let
+    
     subSemi1 = reSemiLin cmap r1
     subSemi2 = reSemiLin cmap r2
-    subEq : langParikh ≡ subSemi1 +s subSemi2
-    subEq = trans lpf refl
-    newInSemi : InSemiLin v (subSemi1 +s subSemi2)
-    newInSemi = subst (InSemiLin v) subEq inSemi
+    langParikh = subSemi1 +s subSemi2
+
     subInSemiPair : InSemiLin v subSemi1 × InSemiLin v subSemi2
     subInSemiPair = {!!} --TODO do the math for this case
     (inLeftSemi , inRightSemi) = subInSemiPair
-    (leftW , leftPf , leftMatch) = reParikhComplete cmap  r1 v subSemi1 refl inLeftSemi
-    (rightW , rightPf , rightMatch) = reParikhComplete cmap  r2 v subSemi2 refl inRightSemi
-
-    w = leftW Data.List.++ rightW
-  
-     
+    (leftW , leftPf , leftMatch) = reParikhComplete cmap  r1 v subSemi1 refl {!!}
+    (rightW , rightPf , rightMatch) = reParikhComplete cmap  r2 v subSemi2 refl {!!}
+    wordConcat : (wordParikh cmap leftW) +v (wordParikh cmap rightW) ≡ wordParikh cmap (leftW Data.List.++ rightW)
     wordConcat = sym (wordParikhPlus cmap leftW rightW)
+  in leftW Data.List.++ rightW ,
+     {!!} , {!!} --(trans {!!} {!!} , (RETypes.ConcatMatch leftMatch rightMatch))
 
-  in w , (trans {!!} {!!} , (RETypes.ConcatMatch leftMatch rightMatch))
 reParikhComplete cmap  (r RETypes.*) v w lpf inSemi = {!!}
