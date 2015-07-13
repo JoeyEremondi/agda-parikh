@@ -91,6 +91,9 @@ v0identRight {v = v} =
   ≡⟨ v0identLeft ⟩ 
     v ∎ 
 
+scalar0ident : {n : ℕ} -> (v : Parikh n ) -> 0 ·ₛ v ≡ v0
+scalar0ident [] = refl
+scalar0ident (x ∷ v) = cong (_∷_ zero) (scalar0ident v)  
 --
 
 --Prove that vector addition is associative
@@ -170,7 +173,9 @@ LinSet n = (Parikh n) × (∃ λ (m : ℕ) → Vec (Parikh n) m )
 --  it might be to reason about this function later.
 --  See the proof of sumPreserved in SemiLinRE, for instance.
 applyLinComb : {n : ℕ} -> Parikh n -> (m : ℕ ) -> (Vec (Parikh n) m ) -> Vec ℕ m ->  Parikh n
-applyLinComb {n} base m vset cs   = 
+applyLinComb base .0 [] cs = base
+applyLinComb base (suc m) (firstVec ∷ vset) (firstConst ∷ cs) = (firstConst ·ₛ firstVec) +v (applyLinComb base m vset cs)
+{-
     let 
       multFuns : Vec (Parikh n -> Parikh n) m
       multFuns = Data.Vec.map (λ (c : ℕ) → λ (v : Parikh n) → c ·ₛ v) cs
@@ -179,6 +184,12 @@ applyLinComb {n} base m vset cs   =
       comb : Parikh n
       comb = Data.Vec.foldr (\_ -> Parikh n) _+v_ v0 scaledVecs
     in (base +v comb)
+-}
+
+
+v0apply : {n m : ℕ} -> (base : Parikh n) -> (vecs : Vec (Parikh n) m ) -> applyLinComb base m  vecs (v0 {m}) ≡ base 
+v0apply base [] = refl
+v0apply {n} {suc m} base (x ∷ vecs) rewrite scalar0ident x | v0apply base vecs = v0identLeft
 
 
 --A type acting as a witness that a vector is in a linear set
@@ -189,15 +200,17 @@ LinComb {n} initV (base , m , vset)  =
 --A semi-linear is a finite union of linear sets
 --We represent this using a list of linear sets
 --TODO Vector?
+{-
 data SemiLinSet : ℕ -> Set where
   EmptySemiLin : {n : ℕ} -> SemiLinSet n
   LinearSemiLin : {n : ℕ} -> LinSet n -> SemiLinSet n
   SemiLinUnion : {n : ℕ} -> SemiLinSet n -> SemiLinSet n -> SemiLinSet n
   SemiLinSum : {n : ℕ} -> SemiLinSet n -> SemiLinSet n -> SemiLinSet n
   SemiLinStar : {n : ℕ} -> SemiLinSet n -> SemiLinSet n
+-}
 
-CanonicalSemiLin : ℕ -> Set
-CanonicalSemiLin n = List (LinSet n )
+SemiLinSet : ℕ -> Set
+SemiLinSet n = List (LinSet n )
 
 _+l_ : {n : ℕ} -> LinSet n -> LinSet n -> LinSet n
 (base1 , m1 , vecs1 ) +l (base2 , m2 , vecs2 ) = (base1 +v base2 , m1 + m2 , vecs1 Data.Vec.++ vecs2 )
@@ -205,27 +218,26 @@ _+l_ : {n : ℕ} -> LinSet n -> LinSet n -> LinSet n
 
 --Sum each linear set in the two semi-linear sets
 --We basically just do a pairwise +l for each linear set in each of the semi-linear sets
-_+s_ : {n : ℕ} -> CanonicalSemiLin n -> CanonicalSemiLin n -> CanonicalSemiLin n
+_+s_ : {n : ℕ} -> SemiLinSet n -> SemiLinSet n -> SemiLinSet n
 s1 +s s2 = Data.List.concat (Data.List.map (λ l1 -> Data.List.map (λ l2 -> l1 +l l2 )  s2 ) s1 )
 
 
-
+{-
 --Data type for a witness that an element is in a semiLinear set
 --Basically just a proof that there's some element (linear set) of the list containing the vector
 data InSemiLin : {n : ℕ} -> (v : Parikh n) -> (sl : SemiLinSet n) -> Set where
-  InEmptySemiLin : {n : ℕ} -> InSemiLin {n} (v0 {n}) EmptySemiLin
   InSemiLinLeftUnion : {n : ℕ} {su : SemiLinSet n} {sv : SemiLinSet n} ->
                    (u : Parikh n) ->
                    (su : SemiLinSet n) ->
                    (sv : SemiLinSet n) ->
                    InSemiLin u su ->
-                   InSemiLin u (SemiLinSum su sv )
+                   InSemiLin u (SemiLinUnion su sv )
   InSemiLinRightUnion : {n : ℕ} {su : SemiLinSet n} {sv : SemiLinSet n} ->
                    (u : Parikh n) ->
                    (su : SemiLinSet n) ->
                    (sv : SemiLinSet n) ->
                    InSemiLin u sv ->
-                   InSemiLin u (SemiLinSum su sv )
+                   InSemiLin u (SemiLinUnion su sv )
   InSemiLinSum : {n : ℕ} {su : SemiLinSet n} {sv : SemiLinSet n} ->
                    (u : Parikh n) ->
                    (v : Parikh n) ->
@@ -233,27 +245,27 @@ data InSemiLin : {n : ℕ} -> (v : Parikh n) -> (sl : SemiLinSet n) -> Set where
                    (u +v v ≡ uv) ->
                    InSemiLin u su ->
                    InSemiLin v sv -> InSemiLin uv (SemiLinSum su sv )
+  InLinSet : {n : ℕ} -> (v : Parikh n) -> (ls : LinSet n ) -> LinComb v ls -> InSemiLin v (LinearSemiLin ls ) 
   InSemiLinEmptyStar : {n : ℕ} -> (su : SemiLinSet n) -> InSemiLin v0 (SemiLinStar su)
-  InSemiLinStar : {n : ℕ} -> (u : Parikh n) -> (v : Parikh n) -> (s : SemiLinSet n) -> InSemiLin u s -> InSemiLin v (SemiLinStar s) -> InSemiLin v (SemiLinStar s) 
-
+  InSemiLinStar : {n : ℕ} -> (u : Parikh n) -> (v : Parikh n) -> (uv : Parikh n) -> (u +v v ≡ uv) -> (s : SemiLinSet n) -> InSemiLin u s -> InSemiLin v (SemiLinStar s) -> InSemiLin uv (SemiLinStar s) 
+-}
 
 --Data type for a witness that an element is in a semiLinear set
 --Basically just a proof that there's some element (linear set) of the list containing the vector
-data InCanonSemiLin : {n : ℕ} -> (v : Parikh n) -> (sl : CanonicalSemiLin n) -> Set where
+data InSemiLin : {n : ℕ} -> (v : Parikh n) -> (sl : SemiLinSet n) -> Set where
   InHead : {n : ℕ} 
     -> (v : Parikh n) 
     -> (sh : LinSet n) 
-    -> (st : CanonicalSemiLin n)
+    -> (st : SemiLinSet n)
     -> LinComb v sh
-    -> InCanonSemiLin v (sh ∷ st)
+    -> InSemiLin v (sh ∷ st)
   InTail : {n : ℕ} 
     -> (v : Parikh n) 
     -> (sh : LinSet n) 
-    -> (st : CanonicalSemiLin n)
-    -> InCanonSemiLin v st
-    -> InCanonSemiLin v (sh ∷ st)
+    -> (st : SemiLinSet n)
+    -> InSemiLin v st
+    -> InSemiLin v (sh ∷ st)
 
-{-
 --A proof that if a vector is in a SemiLinear set, then the vector is also in the 
 --union of that SemiLinear set with another single linear set
 slExtend : {n : ℕ} -> (v : Parikh n) -> (sl : SemiLinSet n) -> InSemiLin v sl -> (ls : LinSet n) -> InSemiLin v (ls ∷ sl )
@@ -268,6 +280,64 @@ slConcatLeft v sl inTail (x ∷ sl2) = InTail v x (sl2 Data.List.++ sl) (slConca
 slConcatRight : {n : ℕ} -> (v : Parikh n) -> (sl : SemiLinSet n) -> InSemiLin v sl -> (sl2 : SemiLinSet n) -> InSemiLin v (sl Data.List.++  sl2 )
 slConcatRight v .(sh ∷ st) (InHead .v sh st x) sl2 = (InHead v sh (st Data.List.++ sl2) x)
 slConcatRight v .(sh ∷ st) (InTail .v sh st inTail) sl2 = slExtend v (st Data.List.++ sl2) (slConcatRight v st inTail sl2) sh
+
+
+--TODO make sure this is right
+--This is supposed to be used for *, but I'm not sure it's right
+
+concatLinSets : {n : ℕ } -> SemiLinSet n -> ∃ (λ (m : ℕ) → Vec (Parikh n) m)
+concatLinSets [] = (0 , [])
+concatLinSets {n} ((base , m ,  linVecs ) ∷ otherLins) = 
+  let
+    newVecs : Vec (Parikh n) (suc m)
+    newVecs = (base ∷ linVecs)
+    (m2 , subVecs) = concatLinSets otherLins
+  in ((suc (m) + m2) , newVecs Data.Vec.++ subVecs)
+
+{-
+
+toCanon : {n : ℕ} -> (SemiLinSet n) -> SemiLinSet n
+toCanon EmptySemiLin = []
+toCanon (LinearSemiLin x) = x ∷ []
+toCanon (SemiLinUnion s1 s2) = toCanon s1 Data.List.++ toCanon s2
+toCanon (SemiLinSum s1 s2) = toCanon s1 +s toCanon s2
+toCanon (SemiLinStar s) = Data.List.[ v0 , concatLinSets (toCanon s) ]
+-}
+
+{-
+inSemiConcat : 
+  {n : ℕ} 
+  -> (v : Parikh n) 
+  -> (sl1 : SemiLinSet n) 
+  -> (sl2 : SemiLinSet n) 
+  -> (sl3 : SemiLinSet n)
+  -> (sl1 Data.List.++ sl2) ≡ sl3
+  ->  InSemiLin v sl3 
+  -> (InSemiLin v sl1) ⊎ (InSemiLin v sl2)
+inSemiConcat v [] sl2 .sl2 refl inSemi = inj₂ inSemi
+inSemiConcat v (x ∷ sl1) sl2 .(sh ∷ st) spf (InHead .v sh st comb) = 
+  let
+    eqPf : x ≡ sh
+    eqPf = listHeadEq spf
+    newComb : LinComb v x
+    newComb = subst (LinComb v) (sym eqPf) comb
+  in inj₁ (InHead v x sl1 newComb)
+inSemiConcat v (x ∷ sl1) sl2 .(sh ∷ st) spf (InTail .v sh st inSemi) with inSemiConcat v sl1 sl2 st (listTailEq spf) inSemi 
+... | inj₁ inSl1 = inj₁ (InTail v x sl1 inSl1)
+... | inj₂ inSl2 = inj₂ inSl2
+-}
+
+{-
+toCanonPf : {n : ℕ} -> (v : Parikh n) -> (s : SemiLinSet n) -> InSemiLin v s ->  InSemiLin v (toCanon s)
+toCanonPf v .(SemiLinUnion su₁ sv₁) (InSemiLinLeftUnion .v su₁ sv₁ inSemi) = slConcatRight v (toCanon su₁) (toCanonPf v su₁ inSemi) (toCanon sv₁)
+toCanonPf v .(SemiLinUnion su₁ sv₁) (InSemiLinRightUnion .v su₁ sv₁ inSemi) = slConcatLeft v (toCanon sv₁) (toCanonPf v sv₁ inSemi) (toCanon su₁)
+toCanonPf v ._ (InSemiLinSum u v₁ .v x inSemi inSemi₁) = {!!}
+toCanonPf v .(LinearSemiLin ls) (InLinSet .v ls comb) = InHead v ls [] comb
+toCanonPf .v0 .(SemiLinStar su) (InSemiLinEmptyStar su) = InHead v0 (v0 , concatLinSets (toCanon su)) [] (v0 , (v0apply v0 (proj₂ (concatLinSets (toCanon su)))))
+toCanonPf .(u1 +v u2) (SemiLinStar s) (InSemiLinStar u1 u2 .(u1 +v u2) refl .s inSemi inSemi₁) = {!!} 
+-}
+{-
+
 -}
 
 --Sum of each vector in a linear set i.e. L1 + L2 = {x + y | x in L1, y in L2 }
@@ -281,18 +351,7 @@ basis : { n : ℕ} -> ( i : Fin.Fin n ) -> Parikh n
 basis Fin.zero  = Data.Vec.[ suc zero ] Data.Vec.++ v0 
 basis (Fin.suc f) = 0 ∷ basis f 
 
---TODO make sure this is right
---This is supposed to be used for *, but I'm not sure it's right
-{-
-concatLinSets : {n : ℕ } -> SemiLinSet n -> LinSet n
-concatLinSets [] = (v0 , 0 , [])
-concatLinSets {n} ((base , m ,  linVecs ) ∷ otherLins) = 
-  let
-    newVecs : Vec (Parikh n) (suc m)
-    newVecs = (base ∷ linVecs)
-    (_ , m2 , subVecs) = concatLinSets otherLins
-  in v0 , ((suc (m) + m2) , newVecs Data.Vec.++ subVecs)
--}
+
 
 --Find the Parikh vector of a given word
 --Here cmap is the mapping of each character to its position
