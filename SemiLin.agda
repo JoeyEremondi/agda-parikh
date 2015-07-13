@@ -189,25 +189,71 @@ LinComb {n} initV (base , m , vset)  =
 --A semi-linear is a finite union of linear sets
 --We represent this using a list of linear sets
 --TODO Vector?
-SemiLinSet : ℕ -> Set
-SemiLinSet n = List (LinSet n)
+data SemiLinSet : ℕ -> Set where
+  EmptySemiLin : {n : ℕ} -> SemiLinSet n
+  LinearSemiLin : {n : ℕ} -> LinSet n -> SemiLinSet n
+  SemiLinUnion : {n : ℕ} -> SemiLinSet n -> SemiLinSet n -> SemiLinSet n
+  SemiLinSum : {n : ℕ} -> SemiLinSet n -> SemiLinSet n -> SemiLinSet n
+  SemiLinStar : {n : ℕ} -> SemiLinSet n -> SemiLinSet n
+
+CanonicalSemiLin : ℕ -> Set
+CanonicalSemiLin n = List (LinSet n )
+
+_+l_ : {n : ℕ} -> LinSet n -> LinSet n -> LinSet n
+(base1 , m1 , vecs1 ) +l (base2 , m2 , vecs2 ) = (base1 +v base2 , m1 + m2 , vecs1 Data.Vec.++ vecs2 )
+
+
+--Sum each linear set in the two semi-linear sets
+--We basically just do a pairwise +l for each linear set in each of the semi-linear sets
+_+s_ : {n : ℕ} -> CanonicalSemiLin n -> CanonicalSemiLin n -> CanonicalSemiLin n
+s1 +s s2 = Data.List.concat (Data.List.map (λ l1 -> Data.List.map (λ l2 -> l1 +l l2 )  s2 ) s1 )
+
+
 
 --Data type for a witness that an element is in a semiLinear set
 --Basically just a proof that there's some element (linear set) of the list containing the vector
 data InSemiLin : {n : ℕ} -> (v : Parikh n) -> (sl : SemiLinSet n) -> Set where
+  InEmptySemiLin : {n : ℕ} -> InSemiLin {n} (v0 {n}) EmptySemiLin
+  InSemiLinLeftUnion : {n : ℕ} {su : SemiLinSet n} {sv : SemiLinSet n} ->
+                   (u : Parikh n) ->
+                   (su : SemiLinSet n) ->
+                   (sv : SemiLinSet n) ->
+                   InSemiLin u su ->
+                   InSemiLin u (SemiLinSum su sv )
+  InSemiLinRightUnion : {n : ℕ} {su : SemiLinSet n} {sv : SemiLinSet n} ->
+                   (u : Parikh n) ->
+                   (su : SemiLinSet n) ->
+                   (sv : SemiLinSet n) ->
+                   InSemiLin u sv ->
+                   InSemiLin u (SemiLinSum su sv )
+  InSemiLinSum : {n : ℕ} {su : SemiLinSet n} {sv : SemiLinSet n} ->
+                   (u : Parikh n) ->
+                   (v : Parikh n) ->
+                   (uv : Parikh n) ->
+                   (u +v v ≡ uv) ->
+                   InSemiLin u su ->
+                   InSemiLin v sv -> InSemiLin uv (SemiLinSum su sv )
+  InSemiLinEmptyStar : {n : ℕ} -> (su : SemiLinSet n) -> InSemiLin v0 (SemiLinStar su)
+  InSemiLinStar : {n : ℕ} -> (u : Parikh n) -> (v : Parikh n) -> (s : SemiLinSet n) -> InSemiLin u s -> InSemiLin v (SemiLinStar s) -> InSemiLin v (SemiLinStar s) 
+
+
+--Data type for a witness that an element is in a semiLinear set
+--Basically just a proof that there's some element (linear set) of the list containing the vector
+data InCanonSemiLin : {n : ℕ} -> (v : Parikh n) -> (sl : CanonicalSemiLin n) -> Set where
   InHead : {n : ℕ} 
     -> (v : Parikh n) 
     -> (sh : LinSet n) 
-    -> (st : SemiLinSet n)
+    -> (st : CanonicalSemiLin n)
     -> LinComb v sh
-    -> InSemiLin v (sh ∷ st)
+    -> InCanonSemiLin v (sh ∷ st)
   InTail : {n : ℕ} 
     -> (v : Parikh n) 
     -> (sh : LinSet n) 
-    -> (st : SemiLinSet n)
-    -> InSemiLin v st
-    -> InSemiLin v (sh ∷ st)
+    -> (st : CanonicalSemiLin n)
+    -> InCanonSemiLin v st
+    -> InCanonSemiLin v (sh ∷ st)
 
+{-
 --A proof that if a vector is in a SemiLinear set, then the vector is also in the 
 --union of that SemiLinear set with another single linear set
 slExtend : {n : ℕ} -> (v : Parikh n) -> (sl : SemiLinSet n) -> InSemiLin v sl -> (ls : LinSet n) -> InSemiLin v (ls ∷ sl )
@@ -222,16 +268,10 @@ slConcatLeft v sl inTail (x ∷ sl2) = InTail v x (sl2 Data.List.++ sl) (slConca
 slConcatRight : {n : ℕ} -> (v : Parikh n) -> (sl : SemiLinSet n) -> InSemiLin v sl -> (sl2 : SemiLinSet n) -> InSemiLin v (sl Data.List.++  sl2 )
 slConcatRight v .(sh ∷ st) (InHead .v sh st x) sl2 = (InHead v sh (st Data.List.++ sl2) x)
 slConcatRight v .(sh ∷ st) (InTail .v sh st inTail) sl2 = slExtend v (st Data.List.++ sl2) (slConcatRight v st inTail sl2) sh
+-}
 
 --Sum of each vector in a linear set i.e. L1 + L2 = {x + y | x in L1, y in L2 }
 --We just add the bases, and concatenate the list of vectors which can be multiplied by constants
-_+l_ : {n : ℕ} -> LinSet n -> LinSet n -> LinSet n
-(base1 , m1 , vecs1 ) +l (base2 , m2 , vecs2 ) = (base1 +v base2 , m1 + m2 , vecs1 Data.Vec.++ vecs2 )
-
---Sum each linear set in the two semi-linear sets
---We basically just do a pairwise +l for each linear set in each of the semi-linear sets
-_+s_ : {n : ℕ} -> SemiLinSet n -> SemiLinSet n -> SemiLinSet n
-s1 +s s2 = Data.List.concat (Data.List.map (λ l1 -> Data.List.map (λ l2 -> l1 +l l2 )  s2 ) s1 )
 
 
 
@@ -243,6 +283,7 @@ basis (Fin.suc f) = 0 ∷ basis f
 
 --TODO make sure this is right
 --This is supposed to be used for *, but I'm not sure it's right
+{-
 concatLinSets : {n : ℕ } -> SemiLinSet n -> LinSet n
 concatLinSets [] = (v0 , 0 , [])
 concatLinSets {n} ((base , m ,  linVecs ) ∷ otherLins) = 
@@ -251,7 +292,7 @@ concatLinSets {n} ((base , m ,  linVecs ) ∷ otherLins) =
     newVecs = (base ∷ linVecs)
     (_ , m2 , subVecs) = concatLinSets otherLins
   in v0 , ((suc (m) + m2) , newVecs Data.Vec.++ subVecs)
-
+-}
 
 --Find the Parikh vector of a given word
 --Here cmap is the mapping of each character to its position
