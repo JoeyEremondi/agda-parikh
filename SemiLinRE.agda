@@ -37,13 +37,15 @@ open import Data.Sum
 
 open import SemiLin
 
-
+--TODO rename?
+sumMap : {n : ℕ} {x : Parikh n} {xs : SemiLinSet n} (inX : InSemiLin x xs) (y : Parikh n ) → InSemiLin (x +v y) {!!}
+sumMap = {!!}
 
 --Show that the sum of two vectors is in the sum of SemiLinear sets containing them
 sumPreserved : 
   {n : ℕ} 
-  -> (u : Parikh n) 
-  -> (v : Parikh n)
+  -> {u : Parikh n} 
+  -> {v : Parikh n}
   -- -> (uv : Parikh n)
   -> (su : SemiLinSet n) 
   -> (sv : SemiLinSet n)
@@ -53,52 +55,8 @@ sumPreserved :
   -> InSemiLin u su
   -> InSemiLin v sv
   -> InSemiLin (u +v v) (su +s sv)
-sumPreserved {n} u v .(sh ∷ st) .(sh₁ ∷ st₁) (InHead .u sh st lcu) (InHead .v sh₁ st₁ lcv) =
-  let
-    su = (sh ∷ st)
-    sv = (sh₁ ∷ st₁)
-    (ubase , um , uvecs) = sh
-    (vbase , vm , vvecs) = sh₁
-    comb1 , pf1 = lcu
-    comb2 , pf2 = lcv
-    concatHead : (su +s sv) ≡ (sh +l sh₁) ∷ Data.List.map (_+l_ sh) st₁ Data.List.++
-                                              Data.List.foldr Data.List._++_ []
-                                              (Data.List.map (λ z → z +l sh₁ ∷ Data.List.map (_+l_ z) st₁) st) 
-    concatHead =  refl
-    ourComb : Vec ℕ (um + vm)
-    ourComb = comb1 Data.Vec.++ comb2
-  in InHead (u +v v) (sh +l sh₁) (Data.List.map (_+l_ sh) st₁ Data.List.++
-                                    Data.List.foldr Data.List._++_ []
-                                    (Data.List.map (λ z → z +l sh₁ ∷ Data.List.map (_+l_ z) st₁) st)) (ourComb , {!!})
-
-sumPreserved {n} u v .(sh ∷ st) .(sh₁ ∷ st₁) (InHead .u sh st linComb) (InTail .v sh₁ st₁ vIn) = {!!} 
-{-  let
-    subCall : InSemiLin (u +v v) ((sh ∷ st) +s st₁)
-    subCall = sumPreserved u v (sh ∷ st) st₁ (InHead u sh st linComb) vIn
-    sPlusDef : (sh ∷ st) +s (sh₁ ∷ st₁) ≡ {!!}
-    sPlusDef = refl
-  in {!!}  
--}  
-sumPreserved u v .(sh ∷ st) .(sh₁ ∷ st₁) (InTail .u sh st uIn) (InTail .v sh₁ st₁ vIn) =
-  let 
-    subCall : InSemiLin (u +v v) (st +s st₁)
-    subCall = sumPreserved u v st st₁ uIn vIn
-  in {!!}
-sumPreserved u v .(sh ∷ st) sv (InTail .u sh st uIn) vIn = {!!}
-{-
---Show that if two vectors are both in a semiLin set, then their sum is in that set
---TODO this is wrong
-subPreserved2 :   {n : ℕ} 
-  -> (u : Parikh n) 
-  -> (v : Parikh n)
-  -> (uv : Parikh n)
-  -> (sl : SemiLinSet n) 
-  -> (uv ≡ u +v v)
-  -> InSemiLin u sl
-  -> InSemiLin v sl
-  -> InSemiLin uv sl
-subPreserved2 u v uv sl sumPf uInSemi vInSemi = {!!}
--}
+sumPreserved .(sh ∷ st) sv (InHead u sh st x) vIn = {!!}
+sumPreserved .(sh ∷ st) sv (InTail u sh st uIn) vIn = {!!}
 
 
 --The algorithm mapping regular expressions to the Parikh set of
@@ -113,7 +71,7 @@ reSemiLin cmap (r1 RETypes.· r2) = reSemiLin cmap r1 +s reSemiLin cmap r2
 reSemiLin cmap (r RETypes.*) = Data.List.[ v0 ,  concatLinSets ( reSemiLin cmap r)  ]
 
 
-
+{-
 --Used in the proof for star
 --Given a semilinear set for r, and the semilinear set for r *,
 --And a proof that a word's parikh is in the semilin for r
@@ -153,7 +111,7 @@ findConstMultMatch {n} par .(sh ∷ st) (tbase , tm ,  tVecs) mapPf sumPf (InHea
 
   in {!!}
 findConstMultMatch par .(sh ∷ st) (_ , tm , tVecs) mapPf sumPf (InTail .par sh st inHead) = {!!}
-
+-}
 
 
 
@@ -170,7 +128,8 @@ reParikhCorrect :
   -> (langParikh : SemiLinSet n)
   -> (langParikh ≡ reSemiLin cmap r )
   -> (InSemiLin wordPar langParikh ) 
-reParikhCorrect cmap .RETypes.ε .[] RETypes.EmptyMatch wordPar wpf langParikh lpf = 
+reParikhCorrect cmap .RETypes.ε .[] RETypes.EmptyMatch .v0 refl .((v0 , 0 , []) ∷ []) refl = InHead v0 (v0 , zero , []) [] ([] , refl)
+{-
   let
     emptyWordPar : wordPar ≡ v0
     emptyWordPar = trans (sym wpf) refl
@@ -181,6 +140,7 @@ reParikhCorrect cmap .RETypes.ε .[] RETypes.EmptyMatch wordPar wpf langParikh l
     inSemi : InSemiLin wordPar (( v0 , 0 , [] ) ∷ [] )
     inSemi = InHead wordPar (v0 , zero , []) [] (v0 , {!!})
   in subst (λ x → InSemiLin wordPar x) emptyLangPf inSemi
+-}
 reParikhCorrect cmap .(RETypes.Lit c) .(c ∷ []) (RETypes.LitMatch c) wordPar wpf langParikh lpf =
   let
     basisPf : wordPar ≡ (basis (cmap c))
