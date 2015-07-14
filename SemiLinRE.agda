@@ -40,44 +40,7 @@ open import SemiLin
 open import Data.Vec.Equality
 open import Data.Nat.Properties.Simple
 
-row : ∀ {A} -> {m n : ℕ} -> Vec A m -> A -> Vec (A × A) m
-row [] ys = []
-row (x ∷ xs) y = (x , y) ∷ row xs y
 
-allPairs : ∀ {A} -> {m n : ℕ} -> Vec A m -> Vec A n -> Vec (A × A) (n * m) 
-allPairs xarg [] = []
-allPairs xarg (y ∷ yarg) = row xarg y Data.Vec.++ allPairs xarg yarg
-
-rowWitness : ∀ {A} -> {m : ℕ} -> (xv : Vec A m) -> (x : A) -> (y : A) -> x ∈ xv -> (x , y ) ∈ row xv y
-rowWitness ._ x y here = here
-rowWitness ._ x y (there xIn) = there (rowWitness _ x y xIn)
-    
-pairWitness : ∀ {A} -> {m n : ℕ} -> (xv : Vec A m) -> (yv : Vec A n) -> (x : A) -> (y : A) -> x ∈ xv -> y ∈ yv -> (x , y ) ∈ allPairs xv yv
-pairWitness ._ ._ x y here here = here
-pairWitness ._ ._ x y (there inx) here = {!!}
---... | here  = {!!}
---... | there rw = ?
-pairWitness xv ._ x y inx (there iny) = {!!}
-
-inConcat : {n : ℕ} -> (v : Parikh n) -> (su : SemiLinSet n) -> (sv : SemiLinSet n) -> InSemiLin v (su Data.List.++ sv) -> (InSemiLin v su) ⊎ (InSemiLin v sv)
-inConcat v [] sv inSemi = inj₂ inSemi
-inConcat v (x ∷ su) sv (InHead .v .x .(su Data.List.++ sv) x₁) = {!!}
-inConcat v (x ∷ su) sv (InTail .v .x .(su Data.List.++ sv) inSemi) with inConcat v su sv inSemi
-... | inj₁ inU = inj₁ (slExtend v su inU x)
-... | inj₂ inV = inj₂ inV
-
-+s-commut : {n : ℕ} -> (v : Parikh n) -> (su : SemiLinSet n) -> (sv : SemiLinSet n) -> InSemiLin v (su +s sv) -> InSemiLin v (sv +s su)
-+s-commut v [] [] ()
-+s-commut v [] (x ∷ sv) ()
-+s-commut v (x ∷ su) [] ()
-+s-commut v ((ub , um , uvecs) ∷ su) ((vb , vm , vvecs) ∷ sv) (InHead .v .(ub +v vb , um + vm , uvecs Data.Vec.++ vvecs) ._ (combC , combPf))
-  rewrite v+-commut ub vb  =
-  let
-    (combU , combV , pf ) = Data.Vec.splitAt um combC
-    ret = InHead v ((vb +v ub) , ((vm + um) , vvecs Data.Vec.++ uvecs)) _ (combV Data.Vec.++ combU , {!combPf!})
-  in ret
-+s-commut v ((ub , um , uvecs) ∷ su) ((vbase , vm , vvecs) ∷ sv) (InTail .v .(ub +v vbase , um + vm , uvecs Data.Vec.++ vvecs) ._ inSum) = {!!}
---Show that the sum of two vectors is in the sum of SemiLinear sets containing them
 sumPreserved : 
   {n : ℕ} 
   -> (u : Parikh n) 
@@ -91,12 +54,7 @@ sumPreserved :
   -> InSemiLin u su
   -> InSemiLin v sv
   -> InSemiLin (u +v v) (su +s sv)
-sumPreserved u v .(sh ∷ st) .(sh₁ ∷ st₁) (InHead .u sh st x) (InHead .v sh₁ st₁ x₁) = {!!}
-sumPreserved u v .(sh ∷ st) .(sh₁ ∷ st₁) (InHead .u sh st x) (InTail .v sh₁ st₁ inv) 
-  with {!!} -- inConcat (u +v v) (sh ∷ st) st₁ (sumPreserved u v (sh ∷ st) st₁ (InHead u sh st x) inv )
-... | _ = {!!} 
-sumPreserved u v .(sh ∷ st) .(sh₁ ∷ st₁) (InTail .u sh st inu) (InHead .v sh₁ st₁ x) = {!!}
-sumPreserved u v .(sh ∷ st) .(sh₁ ∷ st₁) (InTail .u sh st inu) (InTail .v sh₁ st₁ inv) = {!!}
+sumPreserved u v su sv uIn vIn = {!!}
 
 
 --The algorithm mapping regular expressions to the Parikh set of
@@ -111,7 +69,7 @@ reSemiLin cmap (r1 RETypes.· r2) = reSemiLin cmap r1 +s reSemiLin cmap r2
 reSemiLin cmap (r RETypes.*) = Data.List.[ concatLinSets ( reSemiLin cmap r)  ]
 
 
-
+{-
 --Used in the proof for star
 --Given a semilinear set for r, and the semilinear set for r *,
 --And a proof that a word's parikh is in the semilin for r
@@ -151,7 +109,7 @@ findConstMultMatch {n} par .(sh ∷ st) (tbase , tm ,  tVecs) mapPf sumPf (InHea
 
   in {!!}
 findConstMultMatch par .(sh ∷ st) (_ , tm , tVecs) mapPf sumPf (InTail .par sh st inHead) = {!!}
-
+-}
 
 
 
