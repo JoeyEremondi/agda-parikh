@@ -102,6 +102,12 @@ combSplit ub vb (suc um) vm (x ∷ uvecs) vvecs (uc ∷ uconsts) vconsts =
      applyLinComb vb vm vvecs vconsts ∎)
 
 
+--Stolen from the stdlib
+listIdentity : {A : Set} -> (x : List A) -> (x Data.List.++ [] ) ≡ x
+listIdentity [] = refl
+listIdentity (x ∷ xs) = cong (_∷_ x) (listIdentity xs)
+
+
 -- ? ≡⟨ ? ⟩ ?
 sumPreserved : 
   {n : ℕ} 
@@ -124,11 +130,27 @@ sumPreserved u v .((ub , um , uvecs) ∷ st) .((vb , vm , vvecs) ∷ st₁) (InH
                                                                         (λ z → z +l (vb , vm , vvecs) ∷ Data.List.map (_+l_ z) st₁) st)) 
   ((uconsts Data.Vec.++ vconsts) , trans (combSplit ub vb um vm uvecs vvecs uconsts vconsts) 
   (sym (subst (λ x → u +v v ≡ x +v applyLinComb vb vm vvecs vconsts) (sym upf) (cong (λ x → u +v x) (sym vpf)))) )
-{- 
-  InHead (u +v v) (sh +l sh₁) (Data.List.map (_+l_ sh) st₁ Data.List.++
-    Data.List.foldr Data.List._++_ []
-      (Data.List.map (λ z → z +l sh₁ ∷ Data.List.map (_+l_ z) st₁) st)) (uconsts Data.Vec.++ vconsts , {!!}) -}
-sumPreserved u v .(sh ∷ st) .(sh₁ ∷ st₁) (InHead .u sh st x) (InTail .v sh₁ st₁ vIn) = {!!}
+
+sumPreserved u v .(sh ∷ st) .(sh₁ ∷ st₁) (InHead .u sh st x) (InTail .v sh₁ st₁ vIn) = 
+  let
+    subCall1 : InSemiLin (u +v v) ((sh ∷ []) +s  st₁)
+    subCall1 = sumPreserved u v (sh ∷ []) ( st₁) (InHead u sh [] x) vIn
+    
+
+    eqTest : (sh ∷ []) +s ( st₁) ≡ Data.List.map (λ l2 → sh +l l2) st₁
+    eqTest = 
+      begin 
+      (sh ∷ []) +s (st₁) 
+      ≡⟨ refl ⟩ 
+      Data.List.map (λ l2 → sh +l l2) ( st₁) Data.List.++ [] 
+      ≡⟨ listIdentity (Data.List.map (_+l_ sh) st₁) ⟩ 
+      Data.List.map (λ l2 → sh +l l2) (st₁) 
+      ≡⟨ refl ⟩ 
+      (Data.List.map (λ l2 → sh +l l2) st₁ ∎)
+    
+    newCall = slExtend (u +v v) (Data.List.map (_+l_ sh) st₁) (subst (InSemiLin (u +v v)) eqTest subCall1) (sh +l sh₁) -- 
+  in slConcatRight (u +v v) (Data.List.map (λ l2 → sh +l l2) (sh₁ ∷ st₁)) newCall (Data.List.foldr Data.List._++_ []
+                                                                                     (Data.List.map (λ z → z +l sh₁ ∷ Data.List.map (_+l_ z) st₁) st))
 sumPreserved u v .(sh ∷ st) sv (InTail .u sh st uIn) vIn = 
   (slConcatLeft (u +v v) (st +s sv) (sumPreserved u v st sv uIn vIn) (Data.List.map (λ x → sh +l x) sv)) 
 
