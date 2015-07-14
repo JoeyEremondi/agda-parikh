@@ -40,6 +40,24 @@ open import SemiLin
 open import Data.Vec.Equality
 open import Data.Nat.Properties.Simple
 
+-- ? ≡⟨ ? ⟩ ?
+
+testPf : {n : ℕ} (sh : LinSet n) (su : SemiLinSet n) (sv : SemiLinSet n) -> (sh ∷ su ) +s sv ≡ (Data.List.map (λ x → sh +l x) sv ) Data.List.++ (su +s sv)
+testPf sh su sv = refl
+{-
+  begin 
+    (sh ∷ su) +s sv 
+    ≡⟨ refl ⟩ 
+    Data.List.concat
+      (Data.List.map (λ l1 → Data.List.map (λ l2 → l1 +l l2) sv)
+       (sh ∷ su)) 
+    ≡⟨ refl ⟩ 
+    Data.List.concat (Data.List.map (λ l2 → sh +l l2) sv ∷ Data.List.map (λ l1 → Data.List.map (λ l2 → l1 +l l2) sv) su) 
+    ≡⟨ refl ⟩
+    Data.List.map (λ l2 → sh +l l2) sv Data.List.++ Data.List.concat (Data.List.map (λ l1 → Data.List.map (λ l2 → l1 +l l2) sv) su) 
+    ≡⟨ refl ⟩ 
+    Data.List.map (λ l2 → sh +l l2) sv Data.List.++ su +s sv 
+    ∎ -}
 
 sumPreserved : 
   {n : ℕ} 
@@ -54,7 +72,9 @@ sumPreserved :
   -> InSemiLin u su
   -> InSemiLin v sv
   -> InSemiLin (u +v v) (su +s sv)
-sumPreserved u v su sv uIn vIn = {!!}
+sumPreserved u v .(sh ∷ st) sv (InHead .u sh st x) vIn = {!!}
+sumPreserved u v .(sh ∷ st) sv (InTail .u sh st uIn) vIn = 
+  subst (InSemiLin (u +v v)) (sym (testPf sh st sv)) (slConcatLeft (u +v v) (st +s sv) (sumPreserved u v st sv uIn vIn) (Data.List.map (λ x → sh +l x) sv)) --slConcatLeft (u +v v) (st +s sv) (sumPreserved u v st sv uIn vIn) ({!Data.List.map!} Data.List.++ st +s sv)
 
 
 --The algorithm mapping regular expressions to the Parikh set of
