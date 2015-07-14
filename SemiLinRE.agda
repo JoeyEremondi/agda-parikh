@@ -72,9 +72,19 @@ sumPreserved :
   -> InSemiLin u su
   -> InSemiLin v sv
   -> InSemiLin (u +v v) (su +s sv)
-sumPreserved u v .(sh ∷ st) sv (InHead .u sh st x) vIn = {!!}
+sumPreserved u v .((ub , um , uvecs) ∷ st) .((vbase , vm , vvecs) ∷ st₁) (InHead .u (ub , um , uvecs) st (uconsts , upf)) (InHead .v (vbase , vm , vvecs) st₁ (vconsts , vpf)) =
+  InHead (u +v v) (ub +v vbase , um + vm , uvecs Data.Vec.++ vvecs) (Data.List.map (_+l_ (ub , um , uvecs)) st₁ Data.List.++
+                                                                       Data.List.foldr Data.List._++_ []
+                                                                       (Data.List.map
+                                                                        (λ z → z +l (vbase , vm , vvecs) ∷ Data.List.map (_+l_ z) st₁) st)) 
+  ((uconsts Data.Vec.++ vconsts) , {!!})
+{- 
+  InHead (u +v v) (sh +l sh₁) (Data.List.map (_+l_ sh) st₁ Data.List.++
+    Data.List.foldr Data.List._++_ []
+      (Data.List.map (λ z → z +l sh₁ ∷ Data.List.map (_+l_ z) st₁) st)) (uconsts Data.Vec.++ vconsts , {!!}) -}
+sumPreserved u v .(sh ∷ st) .(sh₁ ∷ st₁) (InHead .u sh st x) (InTail .v sh₁ st₁ vIn) = {!!}
 sumPreserved u v .(sh ∷ st) sv (InTail .u sh st uIn) vIn = 
-  subst (InSemiLin (u +v v)) (sym (testPf sh st sv)) (slConcatLeft (u +v v) (st +s sv) (sumPreserved u v st sv uIn vIn) (Data.List.map (λ x → sh +l x) sv)) --slConcatLeft (u +v v) (st +s sv) (sumPreserved u v st sv uIn vIn) ({!Data.List.map!} Data.List.++ st +s sv)
+  (slConcatLeft (u +v v) (st +s sv) (sumPreserved u v st sv uIn vIn) (Data.List.map (λ x → sh +l x) sv)) 
 
 
 --The algorithm mapping regular expressions to the Parikh set of
