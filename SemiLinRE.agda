@@ -158,36 +158,14 @@ reParikhCorrect cmap (.r1 RETypes.+ r2) w (RETypes.RightPlusMatch r1 match) word
     extendToConcat : InSemiLin wordPar ((reSemiLin cmap r1 ) Data.List.++ (reSemiLin cmap r2))
     extendToConcat = slConcatLeft wordPar (reSemiLin cmap r2) rightInSemi (reSemiLin cmap r1)
   in subst (λ x → InSemiLin wordPar x) (sym lpf) extendToConcat
-reParikhCorrect cmap (r1 RETypes.· r2) .s3 (RETypes.ConcatMatch {s1 = s1} {s2 = s2} {s3 = s3} {spf = spf} match1 match2) wordPar wpf langParikh lpf =
+reParikhCorrect cmap (r1 RETypes.· r2) ._ (RETypes.ConcatMatch {s1 = s1} {s2 = s2} {spf = spf} match1 match2) ._ refl ._ refl rewrite (sym spf) | (wordParikhPlus cmap s1 s2) =
  let
     leftParikh = reSemiLin cmap r1
-    leftInSemi : InSemiLin (wordParikh cmap s1) leftParikh
     leftInSemi = reParikhCorrect cmap r1 s1 match1 (wordParikh cmap s1) refl (reSemiLin cmap r1) refl 
-
     rightParikh = reSemiLin cmap r2
-    rightInSemi : InSemiLin (wordParikh cmap s2) rightParikh
     rightInSemi = reParikhCorrect cmap r2 s2 match2 (wordParikh cmap s2) refl (reSemiLin cmap r2) refl
-
-    langParikhIsPlus : langParikh ≡ leftParikh +s rightParikh
-    langParikhIsPlus = lpf
-
-    wordParikhIsPlus : (wordParikh cmap s1) +v (wordParikh cmap s2) ≡ (wordParikh cmap (s1 Data.List.++ s2 )) 
-    wordParikhIsPlus = sym (wordParikhPlus cmap s1 s2)
-    eqChain1 : (wordParikh cmap s1) +v (wordParikh cmap s2) ≡ (wordParikh cmap (s3 ))
-    eqChain1 = subst (λ x → wordParikh cmap s1 +v wordParikh cmap s2 ≡ wordParikh cmap x) spf wordParikhIsPlus
-
-    eqChain2 : (wordParikh cmap s1) +v (wordParikh cmap s2) ≡ wordPar
-    eqChain2 = trans eqChain1 wpf
-
-    semiIsSum : (leftParikh +s rightParikh ) ≡ langParikh
-    semiIsSum = sym lpf
-
-    inSum1 : InSemiLin ((wordParikh cmap s1) +v (wordParikh cmap s2) ) (leftParikh +s rightParikh )
-    inSum1 = {!!} -- sumPreserved (wordParikh cmap s1) (wordParikh cmap s2) (wordParikh cmap s1 +v wordParikh cmap s2) leftParikh rightParikh (leftParikh +s rightParikh) refl refl leftInSemi rightInSemi 
-
-    inSum2 : InSemiLin wordPar (leftParikh +s rightParikh )
-    inSum2 = subst (λ x → InSemiLin x (leftParikh +s rightParikh)) eqChain2 inSum1
-  in subst (λ x → InSemiLin wordPar x) semiIsSum inSum2
+ in sumPreserved leftParikh rightParikh leftInSemi rightInSemi
+  
 reParikhCorrect cmap (r RETypes.*) []  (RETypes.EmptyStarMatch) wordPar wpf langParikh lpf with reSemiLin cmap r | langParikh
 reParikhCorrect cmap (r RETypes.*) []  (RETypes.EmptyStarMatch) wordPar wpf langParikh lpf | _ | [] = {!!} --TODO show this case impossible
 reParikhCorrect  cmap (r RETypes.*) []  (RETypes.EmptyStarMatch) wordPar wpf langParikh lpf | [] | _ ∷ _ = {!!} --TODO show this case impossible
