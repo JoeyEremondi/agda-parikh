@@ -129,19 +129,9 @@ reParikhCorrect :
   -> (langParikh ≡ reSemiLin cmap r )
   -> (InSemiLin wordPar langParikh ) 
 reParikhCorrect cmap .RETypes.ε .[] RETypes.EmptyMatch .v0 refl .((v0 , 0 , []) ∷ []) refl = InHead v0 (v0 , zero , []) [] ([] , refl)
+reParikhCorrect cmap .(RETypes.Lit c) .(c ∷ []) (RETypes.LitMatch c) .(basis (cmap c) +v v0) refl .((basis (cmap c) , 0 , []) ∷ []) refl = 
+  InHead (basis (cmap c) +v v0) (basis (cmap c) , zero , []) [] (subst (λ x → LinComb x (basis (cmap c) , zero , [])) (sym v0identRight) ([] , refl))
 {-
-  let
-    emptyWordPar : wordPar ≡ v0
-    emptyWordPar = trans (sym wpf) refl
-    emptyLangPf : (( v0 , 0 , [] ) ∷ []) ≡ langParikh
-    emptyLangPf = sym lpf
-    zeroSelf : v0 +v v0 ≡ v0
-    zeroSelf = v0identLeft
-    inSemi : InSemiLin wordPar (( v0 , 0 , [] ) ∷ [] )
-    inSemi = InHead wordPar (v0 , zero , []) [] (v0 , {!!})
-  in subst (λ x → InSemiLin wordPar x) emptyLangPf inSemi
--}
-reParikhCorrect cmap .(RETypes.Lit c) .(c ∷ []) (RETypes.LitMatch c) wordPar wpf langParikh lpf =
   let
     basisPf : wordPar ≡ (basis (cmap c))
     basisPf = trans (sym wpf) (trans refl v0identRight)
@@ -150,6 +140,7 @@ reParikhCorrect cmap .(RETypes.Lit c) .(c ∷ []) (RETypes.LitMatch c) wordPar w
     inSemi : InSemiLin wordPar (( (basis (cmap c)) , 0 , [] ) ∷ [] )
     inSemi = InHead wordPar (basis (cmap c) , 0 , []) [] (v0 , {!!} )
   in subst (λ x → InSemiLin wordPar x) (sym basisSemiPf) inSemi
+-}
 reParikhCorrect cmap (r1 RETypes.+ .r2) w (RETypes.LeftPlusMatch r2 match) wordPar wpf langParikh lpf =
   let
     leftParikh = reSemiLin cmap r1
