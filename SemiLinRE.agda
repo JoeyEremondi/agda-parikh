@@ -59,6 +59,50 @@ testPf sh su sv = refl
     Data.List.map (λ l2 → sh +l l2) sv Data.List.++ su +s sv 
     ∎ -}
 
+baseSplit : {n : ℕ} (ub vb : Parikh n) (vm : ℕ) (vvecs : Vec (Parikh n) vm) (vconsts : Vec ℕ vm) -> 
+  applyLinComb (ub +v vb) vm vvecs vconsts
+  ≡ ub +v applyLinComb vb vm vvecs vconsts
+baseSplit ub vb .0 [] [] = refl
+baseSplit ub vb (suc m) (x ∷ vvecs) (c ∷ vconsts)  = 
+  begin 
+  applyLinComb (ub +v vb) (suc m) (x ∷ vvecs) (c ∷ vconsts) 
+  ≡⟨ refl ⟩ --cong {!!} (baseSplit ub vb _ vvecs vconsts) 
+  (c ·ₛ x) +v applyLinComb (ub +v vb) m vvecs vconsts 
+  ≡⟨ cong (λ x₁ → (c ·ₛ x) +v x₁) (baseSplit ub vb m vvecs vconsts) ⟩ 
+  (c ·ₛ x) +v (ub +v applyLinComb vb m vvecs vconsts) 
+  ≡⟨ sym vAssoc ⟩ 
+  ((c ·ₛ x) +v ub) +v applyLinComb vb m vvecs vconsts 
+  ≡⟨ cong (λ x₁ → x₁ +v applyLinComb vb m vvecs vconsts) (v+-commut (c ·ₛ x) ub) ⟩ 
+  (ub +v (c ·ₛ x)) +v applyLinComb vb m vvecs vconsts 
+  ≡⟨ vAssoc ⟩ 
+  (ub +v ((c ·ₛ x) +v applyLinComb vb m vvecs vconsts) ∎)
+
+
+combSplit :
+  {n : ℕ} (ub vb : Parikh n) (um vm : ℕ) (uvecs : Vec (Parikh n) um) (vvecs : Vec (Parikh n) vm) (uconsts : Vec ℕ um) (vconsts : Vec ℕ vm) -> 
+  (applyLinComb (ub +v vb) (um + vm) (uvecs Data.Vec.++ vvecs) (uconsts Data.Vec.++ vconsts)
+  ≡ (applyLinComb ub um uvecs uconsts) +v (applyLinComb vb vm vvecs vconsts) )
+combSplit ub vb .0 vm [] vvecs [] vconsts = baseSplit ub vb vm vvecs vconsts
+combSplit ub vb (suc um) vm (x ∷ uvecs) vvecs (uc ∷ uconsts) vconsts = 
+  begin 
+  applyLinComb (ub +v vb) (suc (um + vm))
+    (x ∷ uvecs Data.Vec.++ vvecs) ((uc ∷ uconsts) Data.Vec.++ vconsts) 
+  ≡⟨ refl ⟩ 
+  (uc ·ₛ x) +v applyLinComb (ub +v vb) (um + vm) (uvecs Data.Vec.++ vvecs)
+                 (uconsts Data.Vec.++ vconsts) 
+  ≡⟨ cong (λ x₁ → (uc ·ₛ x) +v x₁) (combSplit ub vb um vm uvecs vvecs uconsts vconsts) ⟩ 
+  (uc ·ₛ x) +v
+    (applyLinComb ub um uvecs uconsts +v
+     applyLinComb vb vm vvecs vconsts) 
+  ≡⟨ sym vAssoc ⟩ 
+  ((uc ·ₛ x) +v applyLinComb ub um uvecs uconsts) +v
+    applyLinComb vb vm vvecs vconsts 
+  ≡⟨ refl ⟩ 
+  (((uc ·ₛ x) +v applyLinComb ub um uvecs uconsts) +v
+     applyLinComb vb vm vvecs vconsts ∎)
+
+
+-- ? ≡⟨ ? ⟩ ?
 sumPreserved : 
   {n : ℕ} 
   -> (u : Parikh n) 
@@ -72,12 +116,14 @@ sumPreserved :
   -> InSemiLin u su
   -> InSemiLin v sv
   -> InSemiLin (u +v v) (su +s sv)
-sumPreserved u v .((ub , um , uvecs) ∷ st) .((vbase , vm , vvecs) ∷ st₁) (InHead .u (ub , um , uvecs) st (uconsts , upf)) (InHead .v (vbase , vm , vvecs) st₁ (vconsts , vpf)) =
-  InHead (u +v v) (ub +v vbase , um + vm , uvecs Data.Vec.++ vvecs) (Data.List.map (_+l_ (ub , um , uvecs)) st₁ Data.List.++
+sumPreserved u v .((ub , um , uvecs) ∷ st) .((vb , vm , vvecs) ∷ st₁) (InHead .u (ub , um , uvecs) st (uconsts , upf)) (InHead .v (vb , vm , vvecs) st₁ (vconsts , vpf))
+  rewrite   upf | vpf 
+  = InHead (u +v v) (ub +v vb , um + vm , uvecs Data.Vec.++ vvecs) (Data.List.map (_+l_ (ub , um , uvecs)) st₁ Data.List.++
                                                                        Data.List.foldr Data.List._++_ []
                                                                        (Data.List.map
-                                                                        (λ z → z +l (vbase , vm , vvecs) ∷ Data.List.map (_+l_ z) st₁) st)) 
-  ((uconsts Data.Vec.++ vconsts) , {!!})
+                                                                        (λ z → z +l (vb , vm , vvecs) ∷ Data.List.map (_+l_ z) st₁) st)) 
+  ((uconsts Data.Vec.++ vconsts) , trans (combSplit ub vb um vm uvecs vvecs uconsts vconsts) 
+  (sym (subst (λ x → u +v v ≡ x +v applyLinComb vb vm vvecs vconsts) (sym upf) (cong (λ x → u +v x) (sym vpf)))) )
 {- 
   InHead (u +v v) (sh +l sh₁) (Data.List.map (_+l_ sh) st₁ Data.List.++
     Data.List.foldr Data.List._++_ []
@@ -303,5 +349,15 @@ reParikhComplete cmap (r1 RETypes.· r2) v ._ refl inSemi =
   in leftW Data.List.++ rightW ,
      {!!} , {!!} --(trans {!!} {!!} , (RETypes.ConcatMatch leftMatch rightMatch))
 
-reParikhComplete cmap (r RETypes.*) v .(concatLinSets (reSemiLin cmap r) ∷ []) refl (InHead .v .(concatLinSets (reSemiLin cmap r)) .[] (combVecs , combPf)) = {!!}
+reParikhComplete cmap (r RETypes.*) v .(concatLinSets (reSemiLin cmap r) ∷ []) refl (InHead .v .(concatLinSets (reSemiLin cmap r)) .[] (combVecs , combPf))
+  =  {!!}
 reParikhComplete cmap (r RETypes.*) v .(concatLinSets (reSemiLin cmap r) ∷ []) refl (InTail .v .(concatLinSets (reSemiLin cmap r)) .[] ())
+
+--Create module
+--Instantiate module, with setoid argument
+--Rewrite, under the hood, pattern matches that proof is refl
+--Won't always work in functions inside the proofs, get unification problems with functions
+
+--If use fns, do a with which has 3 variables
+--LHS, RHS, and pf that LHS == RHS, pattern match on proof, see that it's refl
+--Unifies left and right
