@@ -218,12 +218,11 @@ scalarAssoc x y (vfirst ∷ v) rewrite scalarAssoc x y v | distribʳ-*-+ vfirst 
 
 applyCombSum : 
   {n m : ℕ} -> 
-  (u v : Parikh n) ->
   (vecs : Vec (Parikh n) m ) ->
   (uconsts vconsts : Parikh m ) -> 
   applyLinComb v0 m vecs (uconsts +v vconsts) ≡ applyLinComb v0 m vecs uconsts +v applyLinComb v0 m vecs vconsts
-applyCombSum u v [] uconsts vconsts = sym v0identRight
-applyCombSum {n} {suc m} u v (firstVec ∷ vecs) (uc ∷ uconsts) (vc ∷ vconsts) rewrite applyCombSum u v vecs uconsts vconsts | scalarAssoc uc vc firstVec = 
+applyCombSum [] uconsts vconsts = sym v0identRight
+applyCombSum {n} {suc m} (firstVec ∷ vecs) (uc ∷ uconsts) (vc ∷ vconsts) rewrite applyCombSum vecs uconsts vconsts | scalarAssoc uc vc firstVec = 
   begin 
   ((uc ·ₛ firstVec) +v (vc ·ₛ firstVec)) +v
     (applyLinComb v0 m vecs uconsts +v
@@ -255,7 +254,7 @@ applyCombSum {n} {suc m} u v (firstVec ∷ vecs) (uc ∷ uconsts) (vc ∷ vconst
 --If a linear set has base 0, and u and v are both in that set, then u+v is as well
 sumEqualVecs : {n : ℕ} -> (ls : LinSet n) -> (proj₁ ls ≡ v0) -> (u v : Parikh n) -> LinComb u ls -> LinComb v ls -> LinComb (u +v v) ls
 sumEqualVecs (.v0 , m , vecs) refl .(applyLinComb v0 m vecs uconsts) .(applyLinComb v0 m vecs vconsts) (uconsts , refl) (vconsts , refl)  = 
-  (uconsts +v vconsts) , {!scalarAssoc!}
+  (uconsts +v vconsts) , applyCombSum vecs uconsts vconsts --applyCombSum {!!} {!!} vecs uconsts vconsts
 
 
 reParikhCorrect : 
