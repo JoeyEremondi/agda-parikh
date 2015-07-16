@@ -254,6 +254,10 @@ concatLinSets {n} ((base , m ,  linVecs ) ∷ otherLins) =
   in v0 , ((suc (m) + m2) , newVecs Data.Vec.++ subVecs)
 
 
+concatZeroBase : {n : ℕ } -> (sl : SemiLinSet n) -> proj₁ (concatLinSets sl ) ≡ v0
+concatZeroBase [] = refl
+concatZeroBase (x ∷ sl) = refl
+
 --Find the Parikh vector of a given word
 --Here cmap is the mapping of each character to its position
 --in the Parikh vector

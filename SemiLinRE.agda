@@ -256,6 +256,20 @@ sumEqualVecs : {n : ℕ} -> (ls : LinSet n) -> (proj₁ ls ≡ v0) -> (u v : Par
 sumEqualVecs (.v0 , m , vecs) refl .(applyLinComb v0 m vecs uconsts) .(applyLinComb v0 m vecs vconsts) (uconsts , refl) (vconsts , refl)  = 
   (uconsts +v vconsts) , applyCombSum vecs uconsts vconsts --applyCombSum {!!} {!!} vecs uconsts vconsts
 
+rightCons : {A : Set} -> (l : List A) -> (l Data.List.++ [] ≡ l)
+rightCons [] = refl
+rightCons (x ∷ l) rewrite rightCons l = refl
+
+rSubsetStar : (r : RETypes.RE RETypes.NonNull) -> (s : List Char) -> RETypes.REMatch s r -> RETypes.REMatch s (r RETypes.*)
+rSubsetStar RETypes.∅ [] ()
+rSubsetStar (RETypes.Lit x) [] ()
+rSubsetStar (r RETypes.+ r₁) [] match = {!!}
+rSubsetStar (r RETypes.· r₁) [] match = {!!} --TODO why is this case possible?
+rSubsetStar r (x ∷ s) match = RETypes.StarMatch match RETypes.EmptyStarMatch --RETypes.StarMatch {!!} RETypes.EmptyStarMatch 
+
+unpackStarSemi : {n : ℕ} -> {r : RETypes.RE RETypes.NonNull} -> (cmap : Char -> Fin.Fin n) -> (v : Parikh n) -> InSemiLin v (reSemiLin cmap (r RETypes.*)) -> LinComb v (concatLinSets (reSemiLin cmap r) )
+unpackStarSemi cmap v (InHead .v ._ .[] lcomb) = lcomb
+unpackStarSemi cmap v (InTail .v ._ .[] ()) 
 
 reParikhCorrect : 
   {n : ℕ} 
@@ -317,13 +331,22 @@ reParikhCorrect cmap (r RETypes.*) [] RETypes.EmptyStarMatch .v0 refl .(concatLi
     v0 +v v0 
     ≡⟨ v0identLeft ⟩ 
     (v0 ∎)))
-reParikhCorrect cmap (r RETypes.*) w (RETypes.StarMatch {c1} {s1t} {s2} {.w} {spf} {.r} match match₁) .(wordParikh cmap w) refl .(concatLinSets (reSemiLin cmap r) ∷ []) refl = 
+reParikhCorrect cmap (r RETypes.*) .(c1 ∷ s1t Data.List.++ s2) (RETypes.StarMatch {c1} {s1t} {s2} {.((c1 ∷ s1t) Data.List.++ s2)} {refl} {.r} match match₁) .(wordParikh cmap ((c1 ∷ s1t) Data.List.++ s2)) refl .(concatLinSets (reSemiLin cmap r) ∷ []) refl rewrite wordParikhPlus cmap (c1 ∷ s1t) s2  = 
+  InHead ((basis (cmap c1) +v wordParikh cmap s1t) +v wordParikh cmap s2) (concatLinSets (reSemiLin cmap r)) [] 
+  (sumEqualVecs (concatLinSets (reSemiLin cmap r)) (concatZeroBase (reSemiLin cmap r)) (basis (cmap c1) +v wordParikh cmap s1t) (wordParikh cmap s2) 
+    (unpackStarSemi cmap (basis (cmap c1) +v wordParikh cmap s1t) 
+      (reParikhCorrect cmap (r RETypes.*) (c1 ∷ s1t) (rSubsetStar r (c1 ∷ s1t) match) (basis (cmap c1) +v wordParikh cmap s1t) refl (concatLinSets (reSemiLin cmap r) ∷ []) refl)) 
+    (unpackStarSemi cmap (wordParikh cmap s2) 
+      (reParikhCorrect cmap (r RETypes.*) s2 match₁ (wordParikh cmap s2) refl (concatLinSets (reSemiLin cmap r) ∷ []) refl)))
 
+{-
   let
-    subPar = reSemiLin cmap r
+    firstStarMatch : RETypes.REMatch (c1 ∷ s1t) (r RETypes.*)
+    firstStarMatch = rSubsetStar r (c1 ∷ s1t) match
+    --subPar = reSemiLin cmap r
     firstMatchPar = wordParikh cmap (c1 ∷ s1t)
-    inSubPar : InSemiLin firstMatchPar subPar
-    inSubPar = reParikhCorrect cmap r (c1 ∷ s1t) match firstMatchPar refl subPar refl
+    inSubPar : InSemiLin firstMatchPar (concatLinSets (reSemiLin cmap r) ∷ [])
+    inSubPar = reParikhCorrect cmap (r RETypes.*) (c1 ∷ s1t) firstStarMatch firstMatchPar refl (concatLinSets (reSemiLin cmap r) ∷ []) refl
 
     secondMatchPar = wordParikh cmap s2
     inSubPar2 : InSemiLin secondMatchPar (concatLinSets (reSemiLin cmap r) ∷ [])
@@ -338,7 +361,7 @@ reParikhCorrect cmap (r RETypes.*) w (RETypes.StarMatch {c1} {s1t} {s2} {.w} {sp
     --newSemiMatch : InSemiLin firstMatchPar langParikh
     --newSemiMatch = {!!} --findConstMultMatch firstMatchPar subPar langParikh lpf inSubPar
     
-  in {!!}
+  in {!!} -}
 
 
 
