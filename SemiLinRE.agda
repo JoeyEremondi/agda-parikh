@@ -40,7 +40,10 @@ open import SemiLin
 open import Data.Vec.Equality
 open import Data.Nat.Properties.Simple
 
--- ? ≡⟨ ? ⟩ ?
+
+module VecNatEq = Data.Vec.Equality.DecidableEquality (Relation.Binary.PropositionalEquality.decSetoid Data.Nat._≟_)
+
+
 
 testPf : {n : ℕ} (sh : LinSet n) (su : SemiLinSet n) (sv : SemiLinSet n) -> (sh ∷ su ) +s sv ≡ (Data.List.map (λ x → sh +l x) sv ) Data.List.++ (su +s sv)
 testPf sh su sv = refl
@@ -209,7 +212,50 @@ findConstMultMatch {n} par .(sh ∷ st) (tbase , tm ,  tVecs) mapPf sumPf (InHea
 findConstMultMatch par .(sh ∷ st) (_ , tm , tVecs) mapPf sumPf (InTail .par sh st inHead) = {!!}
 -}
 
+scalarAssoc : {n : ℕ} -> (x y : ℕ ) -> (v : Parikh n) -> (x + y) ·ₛ v ≡  (x ·ₛ v) +v (y ·ₛ v)
+scalarAssoc x y [] = refl
+scalarAssoc x y (vfirst ∷ v) rewrite scalarAssoc x y v | distribʳ-*-+ vfirst x y = refl
 
+applyCombSum : 
+  {n m : ℕ} -> 
+  (u v : Parikh n) ->
+  (vecs : Vec (Parikh n) m ) ->
+  (uconsts vconsts : Parikh m ) -> 
+  applyLinComb v0 m vecs (uconsts +v vconsts) ≡ applyLinComb v0 m vecs uconsts +v applyLinComb v0 m vecs vconsts
+applyCombSum u v [] uconsts vconsts = sym v0identRight
+applyCombSum {n} {suc m} u v (firstVec ∷ vecs) (uc ∷ uconsts) (vc ∷ vconsts) rewrite applyCombSum u v vecs uconsts vconsts | scalarAssoc uc vc firstVec = 
+  begin 
+  ((uc ·ₛ firstVec) +v (vc ·ₛ firstVec)) +v
+    (applyLinComb v0 m vecs uconsts +v
+     applyLinComb v0 m vecs vconsts) 
+  ≡⟨ vAssoc ⟩ 
+  (uc ·ₛ firstVec) +v
+    ((vc ·ₛ firstVec) +v
+     (applyLinComb v0 m vecs uconsts +v
+      applyLinComb v0 m vecs vconsts)) 
+  ≡⟨ cong (λ x → (uc ·ₛ firstVec) +v x) (v+-commut (vc ·ₛ firstVec) (applyLinComb v0 m vecs uconsts +v applyLinComb v0 m vecs vconsts)) ⟩ 
+  (uc ·ₛ firstVec) +v
+    ((applyLinComb v0 m vecs uconsts +v applyLinComb v0 m vecs vconsts)
+     +v (vc ·ₛ firstVec)) 
+  ≡⟨ sym vAssoc ⟩ 
+  ((uc ·ₛ firstVec) +v
+     (applyLinComb v0 m vecs uconsts +v applyLinComb v0 m vecs vconsts))
+    +v (vc ·ₛ firstVec) 
+  ≡⟨ cong (λ x → x +v (vc ·ₛ firstVec)) (sym vAssoc) ⟩ 
+  (((uc ·ₛ firstVec) +v applyLinComb v0 m vecs uconsts) +v
+     applyLinComb v0 m vecs vconsts)
+    +v (vc ·ₛ firstVec) 
+  ≡⟨ vAssoc ⟩ 
+  ((uc ·ₛ firstVec) +v applyLinComb v0 m vecs uconsts) +v
+    (applyLinComb v0 m vecs vconsts +v (vc ·ₛ firstVec)) 
+  ≡⟨ cong (λ x → ((uc ·ₛ firstVec) +v applyLinComb v0 m vecs uconsts) +v x) (v+-commut (applyLinComb v0 m vecs vconsts) (vc ·ₛ firstVec)) ⟩ 
+  ((uc ·ₛ firstVec) +v applyLinComb v0 m vecs uconsts) +v
+    ((vc ·ₛ firstVec) +v applyLinComb v0 m vecs vconsts) ∎
+-- ? ≡⟨ ? ⟩ ?
+--If a linear set has base 0, and u and v are both in that set, then u+v is as well
+sumEqualVecs : {n : ℕ} -> (ls : LinSet n) -> (proj₁ ls ≡ v0) -> (u v : Parikh n) -> LinComb u ls -> LinComb v ls -> LinComb (u +v v) ls
+sumEqualVecs (.v0 , m , vecs) refl .(applyLinComb v0 m vecs uconsts) .(applyLinComb v0 m vecs vconsts) (uconsts , refl) (vconsts , refl)  = 
+  (uconsts +v vconsts) , {!scalarAssoc!}
 
 
 reParikhCorrect : 
@@ -371,8 +417,11 @@ reParikhComplete cmap (r1 RETypes.· r2) v ._ refl inSemi =
   in leftW Data.List.++ rightW ,
      {!!} , {!!} --(trans {!!} {!!} , (RETypes.ConcatMatch leftMatch rightMatch))
 
-reParikhComplete cmap (r RETypes.*) v .(concatLinSets (reSemiLin cmap r) ∷ []) refl (InHead .v .(concatLinSets (reSemiLin cmap r)) .[] (combVecs , combPf))
-  =  {!!}
+reParikhComplete cmap (r RETypes.*) v .(concatLinSets (reSemiLin cmap r) ∷ []) refl (InHead .v .(concatLinSets (reSemiLin cmap r)) .[] (combVecs , combPf)) 
+  with v0 VecNatEq.≟ v
+reParikhComplete cmap (r RETypes.*) .[] .(concatLinSets (reSemiLin cmap r) ∷ []) refl (InHead .[] .(concatLinSets (reSemiLin cmap r)) .[] (combVecs , combPf)) | yes Equality.[]-cong = 
+  [] , (refl , RETypes.EmptyStarMatch)
+reParikhComplete cmap (r RETypes.*) v .(concatLinSets (reSemiLin cmap r) ∷ []) refl (InHead .v .(concatLinSets (reSemiLin cmap r)) .[] (combVecs , combPf)) | no ¬p = {!!}
 reParikhComplete cmap (r RETypes.*) v .(concatLinSets (reSemiLin cmap r) ∷ []) refl (InTail .v .(concatLinSets (reSemiLin cmap r)) .[] ())
 
 --Create module
