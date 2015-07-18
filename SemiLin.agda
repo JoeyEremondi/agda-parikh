@@ -177,6 +177,7 @@ applyLinComb : {n : ℕ} -> Parikh n -> (m : ℕ ) -> (Vec (Parikh n) m ) -> Vec
 applyLinComb base .0 [] cs = base
 applyLinComb base (suc m) (firstVec ∷ vset) (firstConst ∷ cs) = (firstConst ·ₛ firstVec) +v (applyLinComb base m vset cs)
 
+
 v0apply : {n m : ℕ} -> (base : Parikh n) -> (vecs : Vec (Parikh n) m ) -> applyLinComb base m  vecs (v0 {m}) ≡ base 
 v0apply base [] = refl
 v0apply {n} {suc m} base (x ∷ vecs) rewrite scalar0ident x | v0apply base vecs = v0identLeft

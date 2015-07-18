@@ -484,7 +484,16 @@ reParikhComplete cmap (r RETypes.*) v .(concatLinSets (reSemiLin cmap r) ∷ [])
   with v0 VecNatEq.≟ v
 reParikhComplete cmap (r RETypes.*) .[] .(concatLinSets (reSemiLin cmap r) ∷ []) refl (InHead .[] .(concatLinSets (reSemiLin cmap r)) .[] (combVecs , combPf)) | yes Equality.[]-cong = 
   [] , (refl , RETypes.EmptyStarMatch)
-reParikhComplete cmap (r RETypes.*) v .(concatLinSets (reSemiLin cmap r) ∷ []) refl (InHead .v .(concatLinSets (reSemiLin cmap r)) .[] (combVecs , combPf)) | no ¬p = {!!}
+reParikhComplete cmap (r RETypes.*) .(applyLinComb (proj₁ (concatLinSets (reSemiLin cmap r))) (proj₁ (proj₂ (concatLinSets (reSemiLin cmap r)))) (proj₂ (proj₂ (concatLinSets (reSemiLin cmap r)))) combVecs) .(concatLinSets (reSemiLin cmap r) ∷ []) refl (InHead .(applyLinComb (proj₁ (concatLinSets (reSemiLin cmap r))) (proj₁ (proj₂ (concatLinSets (reSemiLin cmap r)))) (proj₂ (proj₂ (concatLinSets (reSemiLin cmap r)))) combVecs) .(concatLinSets (reSemiLin cmap r)) .[] (combVecs , refl)) | no ¬p rewrite concatZeroBase (reSemiLin cmap r) =
+  let
+    v = (applyLinComb (proj₁ (concatLinSets (reSemiLin cmap r))) (proj₁ (proj₂ (concatLinSets (reSemiLin cmap r)))) (proj₂ (proj₂ (concatLinSets (reSemiLin cmap r)))) combVecs)
+    langParikh = (concatLinSets (reSemiLin cmap r)) ∷ []
+    ourSplit : ∃ λ witnessWord -> ∃ λ v2 -> (RETypes.REMatch witnessWord r × InSemiLin v2 langParikh × wordParikh cmap witnessWord +v v2 ≡ v ) 
+    ourSplit = {!!}
+    witnessWord , v2 , witnessMatch , subInSemi , vpf  = ourSplit
+    subCall = reParikhComplete cmap (r RETypes.*) v2 langParikh refl subInSemi
+    subWord2 , subPf , subMatch = subCall
+  in witnessWord , {!!} , (RETypes.StarMatch witnessMatch subMatch)
 reParikhComplete cmap (r RETypes.*) v .(concatLinSets (reSemiLin cmap r) ∷ []) refl (InTail .v .(concatLinSets (reSemiLin cmap r)) .[] ())
 
 --Create module
