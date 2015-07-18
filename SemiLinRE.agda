@@ -363,6 +363,26 @@ reParikhCorrect cmap (r RETypes.*) .(c1 ∷ s1t Data.List.++ s2) (RETypes.StarMa
     
   in {!!} -}
 
+decomposeLin
+  :  {n : ℕ} 
+  -> (v : Parikh n) 
+  -> (l1 l2 l3 : LinSet n) 
+  -> (l3 ≡ l1 +l l2 ) 
+  -> LinComb v l3 
+  -> ∃ λ v1 → ∃ λ v2 -> (v1 +v v2 ≡ v) × (LinComb v1 l1) × (LinComb v2 l2 )
+decomposeLin .(applyLinComb (b1 +v b2) (m1 + m2) (vecs1 Data.Vec.++ vecs2) coeffs) (b1 , m1 , vecs1) (b2 , m2 , vecs2) .(b1 +v b2 , m1 + m2 , vecs1 Data.Vec.++ vecs2) refl (coeffs , refl) with Data.Vec.splitAt m1 coeffs 
+decomposeLin .(applyLinComb (b1 +v b2) (m1 + m2) (vecs1 Data.Vec.++ vecs2) (coeffs1 Data.Vec.++ coeffs2)) (b1 , m1 , vecs1) (b2 , m2 , vecs2) .(b1 +v b2 , m1 + m2 , vecs1 Data.Vec.++ vecs2) refl (.(coeffs1 Data.Vec.++ coeffs2) , refl) | coeffs1 , coeffs2 , refl rewrite combSplit b1 b2 m1 m2 vecs1 vecs2 coeffs1 coeffs2 
+  = applyLinComb b1 m1 vecs1 coeffs1 , (applyLinComb b2 m2 vecs2 coeffs2 , (refl , ((coeffs1 , refl) , (coeffs2 , refl))))
+
+decomposeSum 
+  :  {n : ℕ} 
+  -> (v : Parikh n) 
+  -> (s1 s2 s3 : SemiLinSet n) 
+  -> (s3 ≡ s1 +s s2 ) 
+  -> InSemiLin v s3 
+  -> ∃ λ v1 → ∃ λ v2 -> (v1 +v v2 ≡ v) × (InSemiLin v1 s1) × (InSemiLin v2 s2 )
+decomposeSum v s1 s2 ._ refl inSemi = {!!}
+
 
 
 --Useful function for splitting semi-linear sets
