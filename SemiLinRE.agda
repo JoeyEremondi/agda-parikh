@@ -380,8 +380,15 @@ decomposeSum
   -> (s1 s2 s3 : SemiLinSet n) 
   -> (s3 ≡ s1 +s s2 ) 
   -> InSemiLin v s3 
-  -> ∃ λ v1 → ∃ λ v2 -> (v1 +v v2 ≡ v) × (InSemiLin v1 s1) × (InSemiLin v2 s2 )
-decomposeSum v s1 s2 ._ refl inSemi = {!!}
+  -> ∃ λ (v1 : Parikh n) → ∃ λ (v2 : Parikh n) -> (v1 +v v2 ≡ v) × (InSemiLin v1 s1) × (InSemiLin v2 s2 )
+decomposeSum v [] [] .[] refl ()
+decomposeSum v [] (x ∷ s2) .[] refl ()
+decomposeSum v (x ∷ s1) [] .(Data.List.foldr Data.List._++_ [] (Data.List.map (λ l1 → []) s1)) refl ()
+decomposeSum v ((b1 , m1 , vecs1) ∷ s1) ((b2 , m2 , vecs2) ∷ s2) ._ refl (InHead .v .(b1 +v b2 , m1 + m2 , vecs1 Data.Vec.++ vecs2) ._ lcomb) =
+  let
+    (v1 , v2 , plusPf , comb1 , comb2 ) = decomposeLin v (b1 , m1 , vecs1) (b2 , m2 , vecs2) (b1 +v b2 , m1 + m2 , vecs1 Data.Vec.++ vecs2) refl lcomb
+  in v1 , v2 , plusPf , InHead v1 (b1 , m1 , vecs1) s1 comb1 , InHead v2 (b2 , m2 , vecs2) s2 comb2
+decomposeSum v ((b1 , m1 , vecs1) ∷ s1) ((b2 , m2 , vecs2) ∷ s2) ._ refl (InTail .v .(b1 +v b2 , m1 + m2 , vecs1 Data.Vec.++ vecs2) ._ inSemi) = {!!}
 
 
 
@@ -442,22 +449,36 @@ reParikhComplete {null? = null?} cmap  (r1 RETypes.+ r2) v langParikh lpf inSemi
   let
     (subw , subPf , subMatch) = reParikhComplete cmap  r2 v (reSemiLin cmap r2) refl in2
   in subw , (subPf , (RETypes.RightPlusMatch r1 subMatch))
-reParikhComplete cmap (r1 RETypes.· r2) v ._ refl inSemi = 
+reParikhComplete cmap (r1 RETypes.· r2) v ._ refl inSemi with decomposeSum v (reSemiLin cmap r1) (reSemiLin cmap r2) (reSemiLin cmap r1 +s reSemiLin cmap r2) refl inSemi | reParikhComplete cmap r1 (proj₁ (decomposeSum v (reSemiLin cmap r1) (reSemiLin cmap r2)
+                                                                                                                                                                                                               (reSemiLin cmap r1 +s reSemiLin cmap r2) refl inSemi)) (reSemiLin cmap r1) refl (proj₁ (proj₂ (proj₂ (proj₂ (decomposeSum v (reSemiLin cmap r1) (reSemiLin cmap r2)
+                                                                                                                                                                                                                                                                                                                              (reSemiLin cmap r1 +s reSemiLin cmap r2) refl inSemi))))) | reParikhComplete cmap r2 (proj₁ (proj₂ (decomposeSum v (reSemiLin cmap r1) (reSemiLin cmap r2)
+                                                                                                                                                                                                                                                                                                                                                                                                                                    (reSemiLin cmap r1 +s reSemiLin cmap r2) refl inSemi))) (reSemiLin cmap r2) refl (proj₂ (proj₂ (proj₂ (proj₂ (decomposeSum v (reSemiLin cmap r1) (reSemiLin cmap r2)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    (reSemiLin cmap r1 +s reSemiLin cmap r2) refl inSemi))))) 
+reParikhComplete cmap (r1 RETypes.· r2) .(wordParikh cmap w1 +v wordParikh cmap w2) .(Data.List.foldr Data.List._++_ [] (Data.List.map _ (reSemiLin cmap r1))) refl inSemi | .(wordParikh cmap w1) , .(wordParikh cmap w2) , refl , inSemi1 , inSemi2 | w1 , refl , match1 | w2 , refl , match2 = (w1 Data.List.++ w2) , ((sym (wordParikhPlus cmap w1 w2)) , (RETypes.ConcatMatch match1 match2))
+{-  let 
+    subLeft = reParikhComplete cmap r1 v1 (reSemiLin cmap r1) refl inSemi1
+    (w1 , pf1 , match1 ) = subLeft 
+    subRight = reParikhComplete cmap r2 v2 (reSemiLin cmap r2) refl inSemi2
+    (w2 , pf2 , match2 ) = subRight
+    wpPlus = sym (wordParikhPlus cmap w1 w2)
+  in w1 Data.List.++ w2 , (sym {!!} , RETypes.ConcatMatch match1 match2) -}
+{- 
   let
     
     subSemi1 = reSemiLin cmap r1
     subSemi2 = reSemiLin cmap r2
     langParikh = subSemi1 +s subSemi2
 
-    subInSemiPair : InSemiLin v subSemi1 × InSemiLin v subSemi2
-    subInSemiPair = {!!} --TODO do the math for this case
-    (inLeftSemi , inRightSemi) = subInSemiPair
+    --subInSemis : InSemiLin v subSemi1 × InSemiLin v subSemi2
+    deomp = decomposeSum v subSemi1 subSemi2 langParikh refl inSemi --TODO do the math for this case
+    (refl , inLeftSemi , inRightSemi) = subInSemiPair
     (leftW , leftPf , leftMatch) = reParikhComplete cmap  r1 v subSemi1 refl {!!}
     (rightW , rightPf , rightMatch) = reParikhComplete cmap  r2 v subSemi2 refl {!!}
     wordConcat : (wordParikh cmap leftW) +v (wordParikh cmap rightW) ≡ wordParikh cmap (leftW Data.List.++ rightW)
     wordConcat = sym (wordParikhPlus cmap leftW rightW)
   in leftW Data.List.++ rightW ,
      {!!} , {!!} --(trans {!!} {!!} , (RETypes.ConcatMatch leftMatch rightMatch))
+-}
 
 reParikhComplete cmap (r RETypes.*) v .(concatLinSets (reSemiLin cmap r) ∷ []) refl (InHead .v .(concatLinSets (reSemiLin cmap r)) .[] (combVecs , combPf)) 
   with v0 VecNatEq.≟ v
