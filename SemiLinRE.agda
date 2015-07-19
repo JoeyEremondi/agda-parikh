@@ -263,8 +263,9 @@ rightCons (x ∷ l) rewrite rightCons l = refl
 rSubsetStar : (r : RETypes.RE RETypes.NonNull) -> (s : List Char) -> RETypes.REMatch s r -> RETypes.REMatch s (r RETypes.*)
 rSubsetStar RETypes.∅ [] ()
 rSubsetStar (RETypes.Lit x) [] ()
-rSubsetStar (r RETypes.+ r₁) [] match = {!!}
-rSubsetStar (r RETypes.· r₁) [] match = {!!} --TODO why is this case possible?
+rSubsetStar (r RETypes.+ r₁) [] (RETypes.LeftPlusMatch .r₁ match) = RETypes.EmptyStarMatch
+rSubsetStar (r RETypes.+ r₁) [] (RETypes.RightPlusMatch .r match) = RETypes.EmptyStarMatch
+rSubsetStar (r RETypes.· r₁) [] match = RETypes.EmptyStarMatch 
 rSubsetStar r (x ∷ s) match = RETypes.StarMatch match RETypes.EmptyStarMatch --RETypes.StarMatch {!!} RETypes.EmptyStarMatch 
 
 unpackStarSemi : {n : ℕ} -> {r : RETypes.RE RETypes.NonNull} -> (cmap : Char -> Fin.Fin n) -> (v : Parikh n) -> InSemiLin v (reSemiLin cmap (r RETypes.*)) -> LinComb v (concatLinSets (reSemiLin cmap r) )
