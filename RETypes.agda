@@ -5,6 +5,7 @@ open import Data.List
 open import Relation.Binary
 open import Relation.Binary.PropositionalEquality
 
+open import Data.Product
 
 
 data Null? : Set where
@@ -86,3 +87,23 @@ data REMatch : {n : Null?} -> List Char -> RE n -> Set where
     -> REMatch (c1 ∷ s1t) r
     -> REMatch s2 (r *)
     -> REMatch s3 (r *)
+
+
+extendRightNonNull : (s : List Char) -> (sRest : List Char) -> (∃ λ c -> ∃ λ t -> (s ≡ c ∷ t)) -> (∃ λ c1 -> ∃ λ t1 -> (s ++ sRest ≡ c1 ∷ t1))
+extendRightNonNull .(c ∷ t) sRest (c , t , refl) = c , t ++ sRest , refl
+
+
+extendLeftNonNull : (s : List Char) -> (sRest : List Char) -> (∃ λ c -> ∃ λ t -> (s ≡ c ∷ t)) -> (∃ λ c1 -> ∃ λ t1 -> (sRest ++ s ≡ c1 ∷ t1))
+extendLeftNonNull .(t ∷ c) [] (t , c , refl) = t , c , refl
+extendLeftNonNull .(t ∷ c) (x ∷ sRest) (t , c , refl)  = x , sRest ++ t ∷ c , refl
+
+nullCorrect : (r : RE NonNull ) -> (s : List Char) -> REMatch s r -> ∃ λ c -> ∃ λ t -> (s ≡ c ∷ t)
+nullCorrect .(Lit c) .(c ∷ []) (LitMatch c) = c , [] , refl
+nullCorrect ._ s (LeftPlusMatch {nb = BothNullB} {r1 = r1} r2 match) = nullCorrect r1 s match
+nullCorrect ._ s (RightPlusMatch {nb = BothNullB} r1 {r2 = r2} match) = nullCorrect r2 s match
+nullCorrect (r1 · r2) s (ConcatMatch {nt = LeftNullT} {s2 = s2} match match₁) with nullCorrect r2 s2 match₁
+nullCorrect (r1 · r2) .(s1 ++ c ∷ t) (ConcatMatch {.MaybeNull} {.NonNull} {.NonNull} {LeftNullT} {s1} {.(c ∷ t)} {.(s1 ++ c ∷ t)} {refl} match match₁) | c , t , refl = extendLeftNonNull (c ∷ t) s1 (c , t , refl)
+nullCorrect (r1 · r2) ._ (ConcatMatch {nt = RightNullT} {s1 = s1} {spf = refl} match match₁) with nullCorrect r1 s1 match
+nullCorrect (r1 · r2) .((c ∷ t) ++ s2) (ConcatMatch {.NonNull} {.MaybeNull} {.NonNull} {RightNullT} {.(c ∷ t)} {s2} {.((c ∷ t) ++ s2)} {refl} match match₁) | c , t , refl = extendRightNonNull (c ∷ t) s2 (c , t , refl)
+nullCorrect (r1 · r2) s (ConcatMatch {nt = BothNonNullT} {s1 = s1} {s2 = s2} match match₁) with nullCorrect r1 s1 match
+nullCorrect (r1 · r2) .(c ∷ t ++ s2) (ConcatMatch {.NonNull} {.NonNull} {.NonNull} {BothNonNullT} {.(c ∷ t)} {s2} {.(c ∷ t ++ s2)} {refl} match match₁) | c , t , refl = extendRightNonNull (c ∷ t) s2 (c , t , refl)
