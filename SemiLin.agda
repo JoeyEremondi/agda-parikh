@@ -225,6 +225,10 @@ slConcatRight : {n : ℕ} -> (v : Parikh n) -> (sl : SemiLinSet n) -> InSemiLin 
 slConcatRight v .(sh ∷ st) (InHead .v sh st x) sl2 = (InHead v sh (st Data.List.++ sl2) x)
 slConcatRight v .(sh ∷ st) (InTail .v sh st inTail) sl2 = slExtend v (st Data.List.++ sl2) (slConcatRight v st inTail sl2) sh
 
+slCons :  {n : ℕ} -> (v : Parikh n) -> (sl : SemiLinSet n) -> (ls : LinSet n) -> (InSemiLin v (ls ∷ [] ) ) -> InSemiLin v (ls ∷ sl )
+slCons v sl sh (InHead .v .sh .[] x) = InHead v sh sl x
+slCons v sl sh (InTail .v .sh .[] ())
+
 --Sum of each vector in a linear set i.e. L1 + L2 = {x + y | x in L1, y in L2 }
 --We just add the bases, and concatenate the list of vectors which can be multiplied by constants
 _+l_ : {n : ℕ} -> LinSet n -> LinSet n -> LinSet n

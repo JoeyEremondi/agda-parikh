@@ -374,6 +374,25 @@ decomposeLin .(applyLinComb (b1 +v b2) (m1 + m2) (vecs1 Data.Vec.++ vecs2) coeff
 decomposeLin .(applyLinComb (b1 +v b2) (m1 + m2) (vecs1 Data.Vec.++ vecs2) (coeffs1 Data.Vec.++ coeffs2)) (b1 , m1 , vecs1) (b2 , m2 , vecs2) .(b1 +v b2 , m1 + m2 , vecs1 Data.Vec.++ vecs2) refl (.(coeffs1 Data.Vec.++ coeffs2) , refl) | coeffs1 , coeffs2 , refl rewrite combSplit b1 b2 m1 m2 vecs1 vecs2 coeffs1 coeffs2 
   = applyLinComb b1 m1 vecs1 coeffs1 , (applyLinComb b2 m2 vecs2 coeffs2 , (refl , ((coeffs1 , refl) , (coeffs2 , refl))))
 
+--If a vector is in the union of two semi-linear sets, it must be inside on of them
+decomposeConcat 
+  :  {n : ℕ} 
+  -> (v : Parikh n) 
+  -> (s1 s2 s3 : SemiLinSet n) 
+  -> (s3 ≡ s1 Data.List.++ s2 ) 
+  -> InSemiLin v s3 
+  -> InSemiLin v s1 ⊎ InSemiLin v s2
+decomposeConcat v [] s2 .s2 refl inSemi = inj₂ inSemi
+decomposeConcat v (x ∷ s1) s2 .(x ∷ s1 Data.List.++ s2) refl (InHead .v .x .(s1 Data.List.++ s2) x₁) = inj₁ (InHead v x s1 x₁)
+decomposeConcat v (x ∷ s1) s2 .(x ∷ s1 Data.List.++ s2) refl (InTail .v .x .(s1 Data.List.++ s2) inSemi) with decomposeConcat v s1 s2 _ refl inSemi
+decomposeConcat v (x₁ ∷ s1) s2 .(x₁ ∷ s1 Data.List.++ s2) refl (InTail .v .x₁ .(s1 Data.List.++ s2) inSemi) | inj₁ x = inj₁ (InTail v x₁ s1 x)
+decomposeConcat v (x ∷ s1) s2 .(x ∷ s1 Data.List.++ s2) refl (InTail .v .x .(s1 Data.List.++ s2) inSemi) | inj₂ y = inj₂ y
+
+concatEq : {n : ℕ} -> (l : LinSet n) -> (s : SemiLinSet n) -> (l ∷ []) +s s ≡ (Data.List.map (_+l_ l) s)
+concatEq l [] = refl
+concatEq l (x ∷ s) rewrite concatEq l s | listIdentity (l ∷ [])  = refl 
+
+
 decomposeSum 
   :  {n : ℕ} 
   -> (v : Parikh n) 
@@ -388,8 +407,39 @@ decomposeSum v ((b1 , m1 , vecs1) ∷ s1) ((b2 , m2 , vecs2) ∷ s2) ._ refl (In
   let
     (v1 , v2 , plusPf , comb1 , comb2 ) = decomposeLin v (b1 , m1 , vecs1) (b2 , m2 , vecs2) (b1 +v b2 , m1 + m2 , vecs1 Data.Vec.++ vecs2) refl lcomb
   in v1 , v2 , plusPf , InHead v1 (b1 , m1 , vecs1) s1 comb1 , InHead v2 (b2 , m2 , vecs2) s2 comb2
-decomposeSum v ((b1 , m1 , vecs1) ∷ s1) ((b2 , m2 , vecs2) ∷ s2) ._ refl (InTail .v .(b1 +v b2 , m1 + m2 , vecs1 Data.Vec.++ vecs2) ._ inSemi) = {!!}
-
+decomposeSum v ((b1 , m1 , vecs1) ∷ s1) ((b2 , m2 , vecs2) ∷ s2) ._ refl (InTail .v .(b1 +v b2 , m1 + m2 , vecs1 Data.Vec.++ vecs2) ._ inSemi) with decomposeConcat v (Data.List.map (_+l_ (b1 , m1 , vecs1)) s2) (Data.List.foldr Data.List._++_ []
+                                                                                                                                                                                                                     (Data.List.map
+                                                                                                                                                                                                                      (λ z → z +l (b2 , m2 , vecs2) ∷ Data.List.map (_+l_ z) s2) s1)) (Data.List.map (_+l_ (b1 , m1 , vecs1)) s2 Data.List.++
+                                                                                                                                                                                                                                                                                         Data.List.foldr Data.List._++_ []
+                                                                                                                                                                                                                                                                                         (Data.List.map
+                                                                                                                                                                                                                                                                                          (λ z → z +l (b2 , m2 , vecs2) ∷ Data.List.map (_+l_ z) s2) s1)) refl inSemi
+decomposeSum v ((b1 , m1 , vecs1) ∷ s1) ((b2 , m2 , vecs2) ∷ s2) .((b1 , m1 , vecs1) +l (b2 , m2 , vecs2) ∷ Data.List.map (_+l_ (b1 , m1 , vecs1)) s2 Data.List.++ Data.List.foldr Data.List._++_ [] (Data.List.map _ s1)) refl (InTail .v .(b1 +v b2 , m1 + m2 , vecs1 Data.Vec.++ vecs2) .(Data.List.map (_+l_ (b1 , m1 , vecs1)) s2 Data.List.++ Data.List.foldr Data.List._++_ [] (Data.List.map _ s1)) inSemi) | inj₁ inSub = 
+  let
+    subCall1 = decomposeSum v ((b1 , m1 , vecs1) ∷ []) s2 _ refl (subst (λ x → InSemiLin v x) (sym (concatEq (b1 , m1 , vecs1) s2)) inSub)
+    v1 , v2 , pf , xIn , yIn = subCall1
+  in v1 , (v2 , (pf , (slCons v1 s1 (b1 , m1 , vecs1) xIn , slExtend v2 s2 yIn (b2 , m2 , vecs2))))
+decomposeSum v ((b1 , m1 , vecs1) ∷ s1) ((b2 , m2 , vecs2) ∷ s2) .((b1 , m1 , vecs1) +l (b2 , m2 , vecs2) ∷ Data.List.map (_+l_ (b1 , m1 , vecs1)) s2 Data.List.++ Data.List.foldr Data.List._++_ [] (Data.List.map _ s1)) refl (InTail .v .(b1 +v b2 , m1 + m2 , vecs1 Data.Vec.++ vecs2) .(Data.List.map (_+l_ (b1 , m1 , vecs1)) s2 Data.List.++ Data.List.foldr Data.List._++_ [] (Data.List.map _ s1)) inSemi) | inj₂ inSub = 
+ let 
+   subCall1 = decomposeSum v s1 ((b2 , m2 , vecs2) ∷ s2) _ refl inSub 
+   v1 , v2 , pf , xIn , yIn = subCall1
+ in v1 , v2 , pf , slExtend v1 s1 xIn (b1 , m1 , vecs1) , yIn
+{- 
+  let
+    test : InSemiLin v
+             (Data.List.map (_+l_ (b1 , m1 , vecs1)) s2 Data.List.++
+              Data.List.foldr Data.List._++_ []
+              (Data.List.map
+               (λ z → z +l (b2 , m2 , vecs2) ∷ Data.List.map (_+l_ z) s2) s1))
+    test = inSemi
+  in {!!} -}
+{-
+test : InSemiLin v
+             (Data.List.map (_+l_ (b1 , m1 , vecs1)) s2 Data.List.++
+              Data.List.foldr Data.List._++_ []
+              (Data.List.map
+               (λ z → z +l (b2 , m2 , vecs2) ∷ Data.List.map (_+l_ z) s2) s1))
+    test = inSemi
+-}
 
 
 --Useful function for splitting semi-linear sets
@@ -492,8 +542,8 @@ reParikhComplete cmap (r RETypes.*) .(applyLinComb (proj₁ (concatLinSets (reSe
     ourSplit = {!!}
     witnessWord , v2 , witnessMatch , subInSemi , vpf  = ourSplit
     subCall = reParikhComplete cmap (r RETypes.*) v2 langParikh refl subInSemi
-    subWord2 , subPf , subMatch = subCall
-  in witnessWord , {!!} , (RETypes.StarMatch witnessMatch subMatch)
+    subWord , subPf , subMatch = subCall
+  in (witnessWord Data.List.++ subWord) , sym {!!} , (RETypes.StarMatch witnessMatch subMatch)
 reParikhComplete cmap (r RETypes.*) v .(concatLinSets (reSemiLin cmap r) ∷ []) refl (InTail .v .(concatLinSets (reSemiLin cmap r)) .[] ())
 
 --Create module
