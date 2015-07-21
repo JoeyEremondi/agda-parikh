@@ -57,6 +57,7 @@ _·ₛ_ : {n : ℕ} -> ℕ -> Parikh n -> Parikh n
 c ·ₛ [] = []
 c ·ₛ (x ∷ vt) = (c * x) ∷ (c ·ₛ vt)
 
+
 --Vector addition
 _+v_ : {n : ℕ} -> Parikh n -> Parikh n -> Parikh n
 [] +v [] = []
@@ -127,6 +128,19 @@ vAssoc2 {x = []} {[]} {[]} = refl
 vAssoc2 {x = x ∷ xs} {y ∷ ys} {z ∷ zs} rewrite +-assoc x y z | vAssoc {x = xs} {y = ys} {z = zs} 
   = refl
 
+
+scalarAssoc : {n : ℕ} -> (x y : ℕ ) -> (v : Parikh n) -> (x + y) ·ₛ v ≡  (x ·ₛ v) +v (y ·ₛ v)
+scalarAssoc x y [] = refl
+scalarAssoc x y (vfirst ∷ v) rewrite scalarAssoc x y v | distribʳ-*-+ vfirst x y = refl
+
+
+ident0 : (x : ℕ) -> x + 0 ≡ x
+ident0 zero = refl
+ident0 (suc x) = cong suc (ident0 x)
+
+scalarIdent : {n : ℕ} -> (v : Parikh n) -> (1 ·ₛ v ≡ v )
+scalarIdent [] = refl
+scalarIdent (x ∷ v) rewrite scalarIdent v | ident0 x = refl
 
 --(λ y₁ → xh + yh + zh ∷ (xt +v yt) +v zt ≡ y₁ ∷ xt +v (yt +v zt))
 {-
@@ -240,6 +254,17 @@ _+s_ : {n : ℕ} -> SemiLinSet n -> SemiLinSet n -> SemiLinSet n
 s1 +s s2 = Data.List.concat (Data.List.map (λ l1 -> Data.List.map (λ l2 -> l1 +l l2 )  s2 ) s1 )
 
 
+l0 : {n : ℕ} -> LinSet n
+l0 = (v0 , zero , [] )
+
+s0 : {n : ℕ} -> SemiLinSet n
+s0 = (v0 , zero , [] ) ∷ []
+
+
+s0match : {n : ℕ} -> (v : Parikh n) -> InSemiLin v s0 -> v ≡ v0
+s0match .v0 (InHead .v0 .(v0 , 0 , []) .[] (comb , refl)) = refl
+s0match v (InTail .v .(v0 , 0 , []) .[] ())
+
 
 --Creates a  vector
 --Which has 1 in the specified component, and 0 elsewhere
@@ -247,6 +272,273 @@ basis : { n : ℕ} -> ( i : Fin.Fin n ) -> Parikh n
 basis Fin.zero  = Data.Vec.[ suc zero ] Data.Vec.++ v0 
 basis (Fin.suc f) = 0 ∷ basis f 
 
+
+--Show that if a vector is in a semi-lin set, then it's not the empty list
+inSemiNonEmtpy : {n : ℕ} -> (v : Parikh n) -> (s : SemiLinSet n) -> InSemiLin v s -> ∃ λ sh -> ∃ λ st -> s ≡ sh ∷ st
+inSemiNonEmtpy v .(sh ∷ st) (InHead .v sh st x) = sh , st , refl
+inSemiNonEmtpy v .(sh ∷ st) (InTail .v sh st inSemi) = sh , st , refl
+
+
+starSum : {n : ℕ} -> LinSet n -> SemiLinSet n -> LinSet n
+starSum (base , m , vecs ) [] = (base , suc m , base ∷ vecs )
+starSum first ((base , m , vecs ) ∷ s) = (base , (suc m , base ∷ vecs)) +l starSum first s
+
+
+starSemiLin : {n : ℕ} -> LinSet n -> SemiLinSet n -> SemiLinSet n
+starSemiLin first s = s0 Data.List.++ (  starSum first s ∷ [])
+
+
+starSumOneEmpty : {n : ℕ} -> (l : LinSet n) -> (ls : LinSet n) -> ls ≡ starSum l [] -> (proj₁ (proj₂ ls) ≡ suc (proj₁ (proj₂ l) ) )
+starSumOneEmpty l .(proj₁ l , suc (proj₁ (proj₂ l)) , proj₁ l ∷ proj₂ (proj₂ l)) refl = refl
+
+
+zeroInStar : {n : ℕ} -> (sh : LinSet n) -> (st ss : SemiLinSet n) -> ss ≡ (starSemiLin sh st)  -> InSemiLin v0 ss
+zeroInStar sh st .((v0 , 0 , []) ∷ starSum sh st ∷ []) refl = InHead v0 (v0 , zero , []) (starSum sh st ∷ []) ([] , refl)
+
+
+linSetLen : {n : ℕ} -> (l1 l2 l3 : LinSet n) -> l1 +l l2 ≡ l3 -> (proj₁ (proj₂ l3)) ≡ (proj₁ (proj₂ l1)) + (proj₁ (proj₂ l2))
+linSetLen (proj₁ , m1 , proj₂) (proj₃ , m2 , proj₄) .(proj₁ +v proj₃ , m1 + m2 , proj₂ Data.Vec.++ proj₄) refl = refl
+
+plusOneDef : ( x : ℕ) -> (suc x ≡ x + 1)
+plusOneDef zero = refl
+plusOneDef (suc x) = cong suc (plusOneDef x)
+
+
+baseSplit : {n : ℕ} (ub vb : Parikh n) (vm : ℕ) (vvecs : Vec (Parikh n) vm) (vconsts : Vec ℕ vm) -> 
+  applyLinComb (ub +v vb) vm vvecs vconsts
+  ≡ ub +v applyLinComb vb vm vvecs vconsts
+baseSplit ub vb .0 [] [] = refl
+baseSplit ub vb (suc m) (x ∷ vvecs) (c ∷ vconsts)  = 
+  begin 
+  applyLinComb (ub +v vb) (suc m) (x ∷ vvecs) (c ∷ vconsts) 
+  ≡⟨ refl ⟩ --cong {!!} (baseSplit ub vb _ vvecs vconsts) 
+  (c ·ₛ x) +v applyLinComb (ub +v vb) m vvecs vconsts 
+  ≡⟨ cong (λ x₁ → (c ·ₛ x) +v x₁) (baseSplit ub vb m vvecs vconsts) ⟩ 
+  (c ·ₛ x) +v (ub +v applyLinComb vb m vvecs vconsts) 
+  ≡⟨ sym vAssoc ⟩ 
+  ((c ·ₛ x) +v ub) +v applyLinComb vb m vvecs vconsts 
+  ≡⟨ cong (λ x₁ → x₁ +v applyLinComb vb m vvecs vconsts) (v+-commut (c ·ₛ x) ub) ⟩ 
+  (ub +v (c ·ₛ x)) +v applyLinComb vb m vvecs vconsts 
+  ≡⟨ vAssoc ⟩ 
+  (ub +v ((c ·ₛ x) +v applyLinComb vb m vvecs vconsts) ∎)
+
+
+combSplit :
+  {n : ℕ} (ub vb : Parikh n) (um vm : ℕ) (uvecs : Vec (Parikh n) um) (vvecs : Vec (Parikh n) vm) (uconsts : Vec ℕ um) (vconsts : Vec ℕ vm) -> 
+  (applyLinComb (ub +v vb) (um + vm) (uvecs Data.Vec.++ vvecs) (uconsts Data.Vec.++ vconsts)
+  ≡ (applyLinComb ub um uvecs uconsts) +v (applyLinComb vb vm vvecs vconsts) )
+combSplit ub vb .0 vm [] vvecs [] vconsts = baseSplit ub vb vm vvecs vconsts
+combSplit ub vb (suc um) vm (x ∷ uvecs) vvecs (uc ∷ uconsts) vconsts = 
+  begin 
+  applyLinComb (ub +v vb) (suc (um + vm))
+    (x ∷ uvecs Data.Vec.++ vvecs) ((uc ∷ uconsts) Data.Vec.++ vconsts) 
+  ≡⟨ refl ⟩ 
+  (uc ·ₛ x) +v applyLinComb (ub +v vb) (um + vm) (uvecs Data.Vec.++ vvecs)
+                 (uconsts Data.Vec.++ vconsts) 
+  ≡⟨ cong (λ x₁ → (uc ·ₛ x) +v x₁) (combSplit ub vb um vm uvecs vvecs uconsts vconsts) ⟩ 
+  (uc ·ₛ x) +v
+    (applyLinComb ub um uvecs uconsts +v
+     applyLinComb vb vm vvecs vconsts) 
+  ≡⟨ sym vAssoc ⟩ 
+  ((uc ·ₛ x) +v applyLinComb ub um uvecs uconsts) +v
+    applyLinComb vb vm vvecs vconsts 
+  ≡⟨ refl ⟩ 
+  (((uc ·ₛ x) +v applyLinComb ub um uvecs uconsts) +v
+     applyLinComb vb vm vvecs vconsts ∎)
+
+
+
+applyCombSum : 
+  {n m : ℕ} -> 
+  (vecs : Vec (Parikh n) m ) ->
+  (uconsts vconsts : Parikh m ) -> 
+  applyLinComb v0 m vecs (uconsts +v vconsts) ≡ applyLinComb v0 m vecs uconsts +v applyLinComb v0 m vecs vconsts
+applyCombSum [] uconsts vconsts = sym v0identRight
+applyCombSum {n} {suc m} (firstVec ∷ vecs) (uc ∷ uconsts) (vc ∷ vconsts) rewrite applyCombSum vecs uconsts vconsts | scalarAssoc uc vc firstVec = 
+  begin 
+  ((uc ·ₛ firstVec) +v (vc ·ₛ firstVec)) +v
+    (applyLinComb v0 m vecs uconsts +v
+     applyLinComb v0 m vecs vconsts) 
+  ≡⟨ vAssoc ⟩ 
+  (uc ·ₛ firstVec) +v
+    ((vc ·ₛ firstVec) +v
+     (applyLinComb v0 m vecs uconsts +v
+      applyLinComb v0 m vecs vconsts)) 
+  ≡⟨ cong (λ x → (uc ·ₛ firstVec) +v x) (v+-commut (vc ·ₛ firstVec) (applyLinComb v0 m vecs uconsts +v applyLinComb v0 m vecs vconsts)) ⟩ 
+  (uc ·ₛ firstVec) +v
+    ((applyLinComb v0 m vecs uconsts +v applyLinComb v0 m vecs vconsts)
+     +v (vc ·ₛ firstVec)) 
+  ≡⟨ sym vAssoc ⟩ 
+  ((uc ·ₛ firstVec) +v
+     (applyLinComb v0 m vecs uconsts +v applyLinComb v0 m vecs vconsts))
+    +v (vc ·ₛ firstVec) 
+  ≡⟨ cong (λ x → x +v (vc ·ₛ firstVec)) (sym vAssoc) ⟩ 
+  (((uc ·ₛ firstVec) +v applyLinComb v0 m vecs uconsts) +v
+     applyLinComb v0 m vecs vconsts)
+    +v (vc ·ₛ firstVec) 
+  ≡⟨ vAssoc ⟩ 
+  ((uc ·ₛ firstVec) +v applyLinComb v0 m vecs uconsts) +v
+    (applyLinComb v0 m vecs vconsts +v (vc ·ₛ firstVec)) 
+  ≡⟨ cong (λ x → ((uc ·ₛ firstVec) +v applyLinComb v0 m vecs uconsts) +v x) (v+-commut (applyLinComb v0 m vecs vconsts) (vc ·ₛ firstVec)) ⟩ 
+  ((uc ·ₛ firstVec) +v applyLinComb v0 m vecs uconsts) +v
+    ((vc ·ₛ firstVec) +v applyLinComb v0 m vecs vconsts) ∎
+-- ? ≡⟨ ? ⟩ ?
+--If a linear set has base 0, and u and v are both in that set, then u+v is as well
+sumEqualVecs : {n : ℕ} -> (ls : LinSet n) -> (proj₁ ls ≡ v0) -> (u v : Parikh n) -> LinComb u ls -> LinComb v ls -> LinComb (u +v v) ls
+sumEqualVecs (.v0 , m , vecs) refl .(applyLinComb v0 m vecs uconsts) .(applyLinComb v0 m vecs vconsts) (uconsts , refl) (vconsts , refl)  = 
+  (uconsts +v vconsts) , applyCombSum vecs uconsts vconsts --applyCombSum {!!} {!!} vecs uconsts vconsts
+
+
+linCombRemoveBase 
+ :  {n : ℕ}
+ -> (m : ℕ )
+ -> (base : Parikh n )
+ -> (vecs : Vec (Parikh n) m )
+ -> (c : Parikh m)
+ -> applyLinComb base m vecs c ≡ base +v applyLinComb v0 m vecs c
+linCombRemoveBase {n} m base vecs c = 
+  begin 
+  applyLinComb base m vecs c 
+  ≡⟨ cong (λ x → applyLinComb x m vecs c) (sym v0identRight) ⟩ 
+  applyLinComb (base +v v0) m vecs c 
+  ≡⟨ baseSplit base v0 m vecs c ⟩
+  base +v applyLinComb v0 m vecs c ∎
+
+linCombDecompBase 
+ :  {n : ℕ}
+ -> (m : ℕ )
+ -> (base : Parikh n )
+ -> (vecs : Vec (Parikh n) m )
+ -> (c1 : Parikh m )
+ -> (c2 : Parikh m)
+ -> (applyLinComb base m vecs c1 ) +v (applyLinComb base m vecs c2 ) ≡ base +v applyLinComb base m vecs (c1 +v c2)
+linCombDecompBase .0 base [] c1 c2 = refl
+linCombDecompBase (suc m) base (vec1 ∷ vecs) (c ∷ c1) (cc ∷ c2) rewrite linCombDecompBase m base vecs c1 c2 | linCombRemoveBase m base vecs c1 | linCombRemoveBase m base vecs c2 | sym vAssoc   = 
+  begin 
+  ((c ·ₛ vec1) +v (base +v applyLinComb v0 m vecs c1)) +v
+    ((cc ·ₛ vec1) +v (base +v applyLinComb v0 m vecs c2)) 
+  ≡⟨ cong (λ x → x +v ((cc ·ₛ vec1) +v (base +v applyLinComb v0 m vecs c2))) (sym vAssoc ) ⟩ 
+  (((c ·ₛ vec1) +v base) +v applyLinComb v0 m vecs c1) +v
+    ((cc ·ₛ vec1) +v (base +v applyLinComb v0 m vecs c2)) 
+  ≡⟨ cong (λ x → (x +v applyLinComb v0 m vecs c1) +v ((cc ·ₛ vec1) +v (base +v applyLinComb v0 m vecs c2))) (v+-commut (c ·ₛ vec1) base) ⟩
+  ((base +v (c ·ₛ vec1)) +v applyLinComb v0 m vecs c1) +v
+    ((cc ·ₛ vec1) +v (base +v applyLinComb v0 m vecs c2)) 
+  ≡⟨ cong (λ x → x +v ((cc ·ₛ vec1) +v (base +v applyLinComb v0 m vecs c2))) vAssoc ⟩
+  (base +v ((c ·ₛ vec1) +v applyLinComb v0 m vecs c1)) +v
+    ((cc ·ₛ vec1) +v (base +v applyLinComb v0 m vecs c2)) 
+  ≡⟨ vAssoc ⟩
+  base +v
+    (((c ·ₛ vec1) +v applyLinComb v0 m vecs c1) +v
+     ((cc ·ₛ vec1) +v (base +v applyLinComb v0 m vecs c2))) 
+  ≡⟨ cong (λ x → base +v (((c ·ₛ vec1) +v applyLinComb v0 m vecs c1) +v x)) (sym vAssoc) ⟩ 
+  base +v
+    (((c ·ₛ vec1) +v applyLinComb v0 m vecs c1) +v
+     (((cc ·ₛ vec1) +v base) +v applyLinComb v0 m vecs c2)) 
+  ≡⟨ cong (λ x → base +v (((c ·ₛ vec1) +v applyLinComb v0 m vecs c1) +v (x +v applyLinComb v0 m vecs c2))) (v+-commut (cc ·ₛ vec1) base) ⟩
+  base +v
+    (((c ·ₛ vec1) +v applyLinComb v0 m vecs c1) +v
+     ((base +v (cc ·ₛ vec1)) +v applyLinComb v0 m vecs c2)) 
+  ≡⟨ cong (λ x → base +v x) vAssoc ⟩ 
+  base +v
+    ((c ·ₛ vec1) +v
+     (applyLinComb v0 m vecs c1 +v
+      ((base +v (cc ·ₛ vec1)) +v applyLinComb v0 m vecs c2))) 
+  ≡⟨ cong (λ x → base +v ((c ·ₛ vec1) +v x)) (sym vAssoc) ⟩ 
+  base +v
+    ((c ·ₛ vec1) +v
+     ((applyLinComb v0 m vecs c1 +v (base +v (cc ·ₛ vec1))) +v
+      applyLinComb v0 m vecs c2)) 
+  ≡⟨ cong (λ x → base +v ((c ·ₛ vec1) +v (x +v applyLinComb v0 m vecs c2))) (v+-commut (applyLinComb v0 m vecs c1) (base +v (cc ·ₛ vec1))) ⟩ 
+  base +v
+    ((c ·ₛ vec1) +v
+     (((base +v (cc ·ₛ vec1)) +v applyLinComb v0 m vecs c1) +v
+      applyLinComb v0 m vecs c2)) 
+  ≡⟨ cong (λ x → base +v ((c ·ₛ vec1) +v x)) vAssoc ⟩ 
+  base +v
+    ((c ·ₛ vec1) +v
+     ((base +v (cc ·ₛ vec1)) +v
+      (applyLinComb v0 m vecs c1 +v applyLinComb v0 m vecs c2))) 
+  ≡⟨ cong (λ x → base +v ((c ·ₛ vec1) +v ((base +v (cc ·ₛ vec1)) +v x))) (sym (applyCombSum vecs c1 c2)) ⟩ 
+  base +v
+    ((c ·ₛ vec1) +v
+     ((base +v (cc ·ₛ vec1)) +v applyLinComb v0 m vecs (c1 +v c2))) 
+  ≡⟨ cong (λ x → base +v x) (sym vAssoc) ⟩
+  base +v
+    (((c ·ₛ vec1) +v (base +v (cc ·ₛ vec1))) +v
+     applyLinComb v0 m vecs (c1 +v c2)) 
+  ≡⟨ cong (λ x → base +v (x +v applyLinComb v0 m vecs (c1 +v c2))) (sym vAssoc) ⟩ 
+  base +v
+    ((((c ·ₛ vec1) +v base) +v (cc ·ₛ vec1)) +v
+     applyLinComb v0 m vecs (c1 +v c2)) 
+  ≡⟨ cong (λ x → base +v ((x +v (cc ·ₛ vec1)) +v applyLinComb v0 m vecs (c1 +v c2))) (v+-commut (c ·ₛ vec1) base) ⟩ 
+  base +v
+    (((base +v (c ·ₛ vec1)) +v (cc ·ₛ vec1)) +v
+     applyLinComb v0 m vecs (c1 +v c2)) 
+  ≡⟨ cong (λ x → base +v (x +v applyLinComb v0 m vecs (c1 +v c2))) vAssoc ⟩ 
+  base +v
+    ((base +v ((c ·ₛ vec1) +v (cc ·ₛ vec1))) +v
+     applyLinComb v0 m vecs (c1 +v c2)) 
+  ≡⟨ cong (λ x → base +v ((base +v x) +v applyLinComb v0 m vecs (c1 +v c2))) (sym (scalarAssoc c cc vec1)) ⟩ 
+  base +v
+    ((base +v ((c + cc) ·ₛ vec1)) +v applyLinComb v0 m vecs (c1 +v c2)) 
+  ≡⟨ cong (λ x → base +v (x +v applyLinComb v0 m vecs (c1 +v c2))) (v+-commut base ((c + cc) ·ₛ vec1)) ⟩ 
+  base +v
+    ((((c + cc) ·ₛ vec1) +v base) +v applyLinComb v0 m vecs (c1 +v c2)) 
+  ≡⟨ cong (λ x → base +v x) vAssoc ⟩ 
+  base +v
+    (((c + cc) ·ₛ vec1) +v (base +v applyLinComb v0 m vecs (c1 +v c2))) 
+  ≡⟨ cong (λ x → base +v (((c + cc) ·ₛ vec1) +v x)) (sym (baseSplit base v0 m vecs (c1 +v c2))) ⟩
+  base +v
+    (((c + cc) ·ₛ vec1) +v applyLinComb (base +v v0) m vecs (c1 +v c2)) 
+  ≡⟨ cong (λ x → base +v (((c + cc) ·ₛ vec1) +v applyLinComb x m vecs (c1 +v c2))) v0identRight ⟩ 
+  base +v (((c + cc) ·ₛ vec1) +v applyLinComb base m vecs (c1 +v c2)) 
+  ≡⟨ {!!} ⟩ 
+  {!!}
+{-  begin 
+  ((c ·ₛ vec1) +v (base +v applyLinComb v0 m vecs c1)) +v
+    ((cc ·ₛ vec1) +v (base +v applyLinComb v0 m vecs c2)) 
+  ≡⟨ cong (λ x → x +v ((cc ·ₛ vec1) +v (base +v applyLinComb v0 m vecs c2))) (sym vAssoc) ⟩ 
+  (((c ·ₛ vec1) +v base) +v applyLinComb v0 m vecs c1) +v
+    ((cc ·ₛ vec1) +v (base +v applyLinComb v0 m vecs c2)) 
+  ≡⟨ {!!} ⟩ {!!} -}
+-- ? ≡⟨ ? ⟩ ?
+
+{-
+linCombLemma 
+ :  {n : ℕ}
+ -> (m : ℕ )
+ -> (base : Parikh n )
+ -> (vecs : Vec (Parikh n) m )
+ -> (c1 : Parikh m )
+ -> (c2 : Parikh (suc m))
+ -> applyLinComb base (suc m) (base ∷ vecs) ((1 ∷ c1) +v c2) ≡ applyLinComb base m vecs c1 +v applyLinComb base (suc m) (base ∷ vecs) c2
+linCombLemma zero base [] [] (x ∷ []) rewrite plusOneDef x | scalarAssoc x 1 base | scalarIdent base = v+-commut ((x ·ₛ base) +v base) base
+linCombLemma (suc m) base (vec1 ∷ vecs) (x₁ ∷ c1) (x₂ ∷ c2) rewrite linCombLemma m base vecs c1 c2 | plusOneDef x₂ | scalarAssoc x₂ 1 base | scalarIdent base  =  {!!} -}
+  {-sym (
+    begin 
+    ((x₁ ·ₛ vec1) +v applyLinComb base m vecs c1) +v
+      ((x₂ ·ₛ base) +v applyLinComb base (suc m) (vec1 ∷ vecs) c2) 
+    ≡⟨ v+-commut ((x₁ ·ₛ vec1) +v applyLinComb base m vecs c1) ((x₂ ·ₛ base) +v applyLinComb base (suc m) (vec1 ∷ vecs) c2) ⟩ 
+    ((x₂ ·ₛ base) +v applyLinComb base (suc m) (vec1 ∷ vecs) c2) +v
+      ((x₁ ·ₛ vec1) +v applyLinComb base m vecs c1) 
+    ≡⟨ vAssoc ⟩ 
+    (x₂ ·ₛ base) +v
+      (applyLinComb base (suc m) (vec1 ∷ vecs) c2 +v
+       ((x₁ ·ₛ vec1) +v applyLinComb base m vecs c1)) 
+    ≡⟨ {!!} ⟩ 
+    {!!}) -}
+
+starExtend : {n : ℕ} -> (v1 v2 : Parikh n ) -> (sh : LinSet n ) -> ( st s ss : SemiLinSet n) -> sh ∷ st ≡ s -> ss ≡ (starSum sh st) ∷ []  -> InSemiLin v1 s -> InSemiLin v2 ss -> InSemiLin (v1 +v v2) ss
+starExtend .(applyLinComb base m vecs c1) .(applyLinComb base (suc m) (base ∷ vecs) c2) (base , m , vecs) [] .((base , m , vecs) ∷ []) .((base , suc m , base ∷ vecs) ∷ []) refl refl (InHead .(applyLinComb base m vecs c1) .(base , m , vecs) .[] (c1 , refl)) (InHead .(applyLinComb base (suc m) (base ∷ vecs) c2) .(base , suc m , base ∷ vecs) .[] (c2 , refl)) = InHead (applyLinComb base m vecs c1 +v
+                                                                                                                                                                                                                                                                                                                                                                                  applyLinComb base (suc m) (base ∷ vecs) c2) (base , suc m , base ∷ vecs) [] (((1 ∷ c1) +v c2) , {!!})
+starExtend v1 v2 (base , m , vecs) [] .((base , m , vecs) ∷ []) .((base , suc m , base ∷ vecs) ∷ []) refl refl (InHead .v1 .(base , m , vecs) .[] x) (InTail .v2 .(base , suc m , base ∷ vecs) .[] inSS) = {!!}
+starExtend v1 v2 sh [] .(sh ∷ []) ss refl pf2 (InTail .v1 .sh .[] ()) inSS
+starExtend v1 v2 sh (x ∷ st) .(sh ∷ x ∷ st) ss refl pf2 inS inSS = {!!}
+
+
+
+
+{-
 --TODO make sure this is right
 --This is supposed to be used for *, but I'm not sure it's right
 concatLinSets : {n : ℕ } -> SemiLinSet n -> LinSet n
@@ -262,6 +554,9 @@ concatLinSets {n} ((base , m ,  linVecs ) ∷ otherLins) =
 concatZeroBase : {n : ℕ } -> (sl : SemiLinSet n) -> proj₁ (concatLinSets sl ) ≡ v0
 concatZeroBase [] = refl
 concatZeroBase (x ∷ sl) = refl
+-}
+
+
 
 --Find the Parikh vector of a given word
 --Here cmap is the mapping of each character to its position

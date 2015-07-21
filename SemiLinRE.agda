@@ -62,47 +62,6 @@ testPf sh su sv = refl
     Data.List.map (λ l2 → sh +l l2) sv Data.List.++ su +s sv 
     ∎ -}
 
-baseSplit : {n : ℕ} (ub vb : Parikh n) (vm : ℕ) (vvecs : Vec (Parikh n) vm) (vconsts : Vec ℕ vm) -> 
-  applyLinComb (ub +v vb) vm vvecs vconsts
-  ≡ ub +v applyLinComb vb vm vvecs vconsts
-baseSplit ub vb .0 [] [] = refl
-baseSplit ub vb (suc m) (x ∷ vvecs) (c ∷ vconsts)  = 
-  begin 
-  applyLinComb (ub +v vb) (suc m) (x ∷ vvecs) (c ∷ vconsts) 
-  ≡⟨ refl ⟩ --cong {!!} (baseSplit ub vb _ vvecs vconsts) 
-  (c ·ₛ x) +v applyLinComb (ub +v vb) m vvecs vconsts 
-  ≡⟨ cong (λ x₁ → (c ·ₛ x) +v x₁) (baseSplit ub vb m vvecs vconsts) ⟩ 
-  (c ·ₛ x) +v (ub +v applyLinComb vb m vvecs vconsts) 
-  ≡⟨ sym vAssoc ⟩ 
-  ((c ·ₛ x) +v ub) +v applyLinComb vb m vvecs vconsts 
-  ≡⟨ cong (λ x₁ → x₁ +v applyLinComb vb m vvecs vconsts) (v+-commut (c ·ₛ x) ub) ⟩ 
-  (ub +v (c ·ₛ x)) +v applyLinComb vb m vvecs vconsts 
-  ≡⟨ vAssoc ⟩ 
-  (ub +v ((c ·ₛ x) +v applyLinComb vb m vvecs vconsts) ∎)
-
-
-combSplit :
-  {n : ℕ} (ub vb : Parikh n) (um vm : ℕ) (uvecs : Vec (Parikh n) um) (vvecs : Vec (Parikh n) vm) (uconsts : Vec ℕ um) (vconsts : Vec ℕ vm) -> 
-  (applyLinComb (ub +v vb) (um + vm) (uvecs Data.Vec.++ vvecs) (uconsts Data.Vec.++ vconsts)
-  ≡ (applyLinComb ub um uvecs uconsts) +v (applyLinComb vb vm vvecs vconsts) )
-combSplit ub vb .0 vm [] vvecs [] vconsts = baseSplit ub vb vm vvecs vconsts
-combSplit ub vb (suc um) vm (x ∷ uvecs) vvecs (uc ∷ uconsts) vconsts = 
-  begin 
-  applyLinComb (ub +v vb) (suc (um + vm))
-    (x ∷ uvecs Data.Vec.++ vvecs) ((uc ∷ uconsts) Data.Vec.++ vconsts) 
-  ≡⟨ refl ⟩ 
-  (uc ·ₛ x) +v applyLinComb (ub +v vb) (um + vm) (uvecs Data.Vec.++ vvecs)
-                 (uconsts Data.Vec.++ vconsts) 
-  ≡⟨ cong (λ x₁ → (uc ·ₛ x) +v x₁) (combSplit ub vb um vm uvecs vvecs uconsts vconsts) ⟩ 
-  (uc ·ₛ x) +v
-    (applyLinComb ub um uvecs uconsts +v
-     applyLinComb vb vm vvecs vconsts) 
-  ≡⟨ sym vAssoc ⟩ 
-  ((uc ·ₛ x) +v applyLinComb ub um uvecs uconsts) +v
-    applyLinComb vb vm vvecs vconsts 
-  ≡⟨ refl ⟩ 
-  (((uc ·ₛ x) +v applyLinComb ub um uvecs uconsts) +v
-     applyLinComb vb vm vvecs vconsts ∎)
 
 
 --Stolen from the stdlib
@@ -212,49 +171,6 @@ findConstMultMatch {n} par .(sh ∷ st) (tbase , tm ,  tVecs) mapPf sumPf (InHea
 findConstMultMatch par .(sh ∷ st) (_ , tm , tVecs) mapPf sumPf (InTail .par sh st inHead) = {!!}
 -}
 
-scalarAssoc : {n : ℕ} -> (x y : ℕ ) -> (v : Parikh n) -> (x + y) ·ₛ v ≡  (x ·ₛ v) +v (y ·ₛ v)
-scalarAssoc x y [] = refl
-scalarAssoc x y (vfirst ∷ v) rewrite scalarAssoc x y v | distribʳ-*-+ vfirst x y = refl
-
-applyCombSum : 
-  {n m : ℕ} -> 
-  (vecs : Vec (Parikh n) m ) ->
-  (uconsts vconsts : Parikh m ) -> 
-  applyLinComb v0 m vecs (uconsts +v vconsts) ≡ applyLinComb v0 m vecs uconsts +v applyLinComb v0 m vecs vconsts
-applyCombSum [] uconsts vconsts = sym v0identRight
-applyCombSum {n} {suc m} (firstVec ∷ vecs) (uc ∷ uconsts) (vc ∷ vconsts) rewrite applyCombSum vecs uconsts vconsts | scalarAssoc uc vc firstVec = 
-  begin 
-  ((uc ·ₛ firstVec) +v (vc ·ₛ firstVec)) +v
-    (applyLinComb v0 m vecs uconsts +v
-     applyLinComb v0 m vecs vconsts) 
-  ≡⟨ vAssoc ⟩ 
-  (uc ·ₛ firstVec) +v
-    ((vc ·ₛ firstVec) +v
-     (applyLinComb v0 m vecs uconsts +v
-      applyLinComb v0 m vecs vconsts)) 
-  ≡⟨ cong (λ x → (uc ·ₛ firstVec) +v x) (v+-commut (vc ·ₛ firstVec) (applyLinComb v0 m vecs uconsts +v applyLinComb v0 m vecs vconsts)) ⟩ 
-  (uc ·ₛ firstVec) +v
-    ((applyLinComb v0 m vecs uconsts +v applyLinComb v0 m vecs vconsts)
-     +v (vc ·ₛ firstVec)) 
-  ≡⟨ sym vAssoc ⟩ 
-  ((uc ·ₛ firstVec) +v
-     (applyLinComb v0 m vecs uconsts +v applyLinComb v0 m vecs vconsts))
-    +v (vc ·ₛ firstVec) 
-  ≡⟨ cong (λ x → x +v (vc ·ₛ firstVec)) (sym vAssoc) ⟩ 
-  (((uc ·ₛ firstVec) +v applyLinComb v0 m vecs uconsts) +v
-     applyLinComb v0 m vecs vconsts)
-    +v (vc ·ₛ firstVec) 
-  ≡⟨ vAssoc ⟩ 
-  ((uc ·ₛ firstVec) +v applyLinComb v0 m vecs uconsts) +v
-    (applyLinComb v0 m vecs vconsts +v (vc ·ₛ firstVec)) 
-  ≡⟨ cong (λ x → ((uc ·ₛ firstVec) +v applyLinComb v0 m vecs uconsts) +v x) (v+-commut (applyLinComb v0 m vecs vconsts) (vc ·ₛ firstVec)) ⟩ 
-  ((uc ·ₛ firstVec) +v applyLinComb v0 m vecs uconsts) +v
-    ((vc ·ₛ firstVec) +v applyLinComb v0 m vecs vconsts) ∎
--- ? ≡⟨ ? ⟩ ?
---If a linear set has base 0, and u and v are both in that set, then u+v is as well
-sumEqualVecs : {n : ℕ} -> (ls : LinSet n) -> (proj₁ ls ≡ v0) -> (u v : Parikh n) -> LinComb u ls -> LinComb v ls -> LinComb (u +v v) ls
-sumEqualVecs (.v0 , m , vecs) refl .(applyLinComb v0 m vecs uconsts) .(applyLinComb v0 m vecs vconsts) (uconsts , refl) (vconsts , refl)  = 
-  (uconsts +v vconsts) , applyCombSum vecs uconsts vconsts --applyCombSum {!!} {!!} vecs uconsts vconsts
 
 rightCons : {A : Set} -> (l : List A) -> (l Data.List.++ [] ≡ l)
 rightCons [] = refl
