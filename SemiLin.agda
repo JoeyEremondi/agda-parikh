@@ -390,6 +390,16 @@ sumEqualVecs : {n : ℕ} -> (ls : LinSet n) -> (proj₁ ls ≡ v0) -> (u v : Par
 sumEqualVecs (.v0 , m , vecs) refl .(applyLinComb v0 m vecs uconsts) .(applyLinComb v0 m vecs vconsts) (uconsts , refl) (vconsts , refl)  = 
   (uconsts +v vconsts) , applyCombSum vecs uconsts vconsts --applyCombSum {!!} {!!} vecs uconsts vconsts
 
+linContainsBase : {n : ℕ} -> (base : Parikh n) -> (m : ℕ ) -> (vecs : Vec (Parikh n) m ) -> applyLinComb base m vecs v0 ≡ base
+linContainsBase base .0 [] = refl
+linContainsBase base (suc m) (x ∷ vecs) rewrite linContainsBase base m vecs  = 
+  begin 
+  (zero ·ₛ x) +v base 
+  ≡⟨ cong (λ y → y +v base) (scalar0ident x) ⟩
+  v0 +v base 
+  ≡⟨ v0identLeft ⟩ 
+  (base ∎)
+
 
 linCombRemoveBase 
  :  {n : ℕ}
@@ -572,7 +582,21 @@ linStarDecomp
  -> LinComb v ls
  -> LinComb v l ⊎ (∃ λ v1 -> ∃ λ v2 -> v1 +v v2 ≡ v × LinComb v1 l × LinComb v2 ls  ) 
 linStarDecomp .((0 ·ₛ base) +v applyLinComb base m vecs c) (base , m , vecs) .(base , suc m , base ∷ vecs) refl (zero ∷ c , refl) rewrite scalar0ident base  = inj₁ (c , (sym v0identLeft))
-linStarDecomp .((suc cbase ·ₛ base) +v applyLinComb base m vecs c) (base , m , vecs) .(base , suc m , base ∷ vecs) refl (suc cbase ∷ c , refl) = {!!}
+linStarDecomp .((suc cbase ·ₛ base) +v applyLinComb base m vecs c) (base , m , vecs) .(base , suc m , base ∷ vecs) refl (suc cbase ∷ c , refl) = inj₂ (base , applyLinComb base (suc m) (base ∷ vecs) (cbase ∷ c) , 
+  (sym (begin -- ? ≡⟨ ? ⟩ ? 
+    (suc cbase ·ₛ base) +v applyLinComb base m vecs c 
+    ≡⟨ cong (λ x → x +v applyLinComb base m vecs c) refl ⟩ 
+    ((1 + cbase) ·ₛ base) +v applyLinComb base m vecs c
+    ≡⟨ cong (λ x → x +v applyLinComb base m vecs c) (scalarAssoc 1 cbase base) ⟩
+    ((suc zero ·ₛ base) +v (cbase ·ₛ base)) +v
+      applyLinComb base m vecs c 
+    ≡⟨ cong (λ x → (x +v (cbase ·ₛ base)) +v applyLinComb base m vecs c) (scalarIdent base) ⟩ 
+    (base +v (cbase ·ₛ base)) +v applyLinComb base m vecs c 
+    ≡⟨  vAssoc ⟩ 
+    base +v ((cbase ·ₛ base) +v applyLinComb base m vecs c) 
+    ≡⟨ refl ⟩ 
+    (base +v ((cbase ·ₛ base) +v applyLinComb base m vecs c) ∎))) ,
+  (v0 , linContainsBase base m vecs) , (cbase ∷ c) , refl )
   
 {-
 linCombLemma 
