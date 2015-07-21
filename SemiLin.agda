@@ -278,10 +278,12 @@ inSemiNonEmtpy : {n : ℕ} -> (v : Parikh n) -> (s : SemiLinSet n) -> InSemiLin 
 inSemiNonEmtpy v .(sh ∷ st) (InHead .v sh st x) = sh , st , refl
 inSemiNonEmtpy v .(sh ∷ st) (InTail .v sh st inSemi) = sh , st , refl
 
+linStar : {n : ℕ} -> LinSet n -> LinSet n
+linStar (base , m , vecs ) = (base , suc m , base ∷ vecs )
 
 starSum : {n : ℕ} -> LinSet n -> SemiLinSet n -> LinSet n
-starSum (base , m , vecs ) [] = (base , suc m , base ∷ vecs )
-starSum first ((base , m , vecs ) ∷ s) = (base , (suc m , base ∷ vecs)) +l starSum first s
+starSum ls [] = linStar ls
+starSum first (sh ∷ s) = (linStar sh) +l starSum first s
 
 
 starSemiLin : {n : ℕ} -> LinSet n -> SemiLinSet n -> SemiLinSet n
@@ -503,6 +505,40 @@ linCombDecompBase (suc m) base (vec1 ∷ vecs) (c ∷ c1) (cc ∷ c2) rewrite li
   ≡⟨ {!!} ⟩ {!!} -}
 -- ? ≡⟨ ? ⟩ ?
 
+linStarExtend 
+  : {n : ℕ} -> (v1 v2 : Parikh n ) ->
+  (l1 ls : LinSet n ) -> ls ≡ linStar l1  -> LinComb v1 l1 -> LinComb v2 ls -> LinComb (v1 +v v2) ls
+linStarExtend .(applyLinComb base m vecs c1) .((c2h ·ₛ base) +v applyLinComb base m vecs c2) (base , m , vecs) .(base , suc m , base ∷ vecs) refl (c1 , refl) (c2h ∷ c2 , refl)  =
+  ((1 ∷ c1) +v (c2h ∷ c2)) , 
+  (begin 
+  (suc c2h ·ₛ base) +v applyLinComb base m vecs (c1 +v c2) 
+  ≡⟨ cong (λ x → (x ·ₛ base) +v applyLinComb base m vecs (c1 +v c2)) refl  ⟩
+  ((1 + c2h) ·ₛ base) +v applyLinComb base m vecs (c1 +v c2) 
+  ≡⟨ cong (λ x → (x ·ₛ base) +v applyLinComb base m vecs (c1 +v c2)) (+-comm (suc zero) c2h) ⟩ 
+  ((c2h + 1) ·ₛ base) +v applyLinComb base m vecs (c1 +v c2) 
+  ≡⟨ cong (λ x → x +v applyLinComb base m vecs (c1 +v c2)) (scalarAssoc c2h 1 base) ⟩
+  ((c2h ·ₛ base) +v (1 ·ₛ base)) +v
+    applyLinComb base m vecs (c1 +v c2) 
+  ≡⟨ cong (λ x → ((c2h ·ₛ base) +v x) +v applyLinComb base m vecs (c1 +v c2)) (scalarIdent base) ⟩ 
+  ((c2h ·ₛ base) +v base) +v applyLinComb base m vecs (c1 +v c2) 
+  ≡⟨ vAssoc ⟩
+  (c2h ·ₛ base) +v (base +v applyLinComb base m vecs (c1 +v c2)) 
+  ≡⟨ cong (λ x → (c2h ·ₛ base) +v x) (sym (linCombDecompBase m base vecs c1 c2)) ⟩ 
+  (c2h ·ₛ base) +v
+    (applyLinComb base m vecs c1 +v applyLinComb base m vecs c2) 
+  ≡⟨ cong (λ x → (c2h ·ₛ base) +v x) (v+-commut (applyLinComb base m vecs c1) (applyLinComb base m vecs c2)) ⟩
+  (c2h ·ₛ base) +v
+    (applyLinComb base m vecs c2 +v applyLinComb base m vecs c1) 
+  ≡⟨ sym vAssoc ⟩
+  ((c2h ·ₛ base) +v applyLinComb base m vecs c2) +v
+    applyLinComb base m vecs c1 
+  ≡⟨ cong (λ x → x +v applyLinComb base m vecs c1 ) refl ⟩ 
+  (applyLinComb base (suc m) (base ∷ vecs) (c2h ∷ c2)) +v
+    applyLinComb base m vecs c1 
+  ≡⟨ v+-commut ((c2h ·ₛ base) +v applyLinComb base m vecs c2) (applyLinComb base m vecs c1) ⟩ applyLinComb base m vecs c1 +v
+              ((c2h ·ₛ base) +v applyLinComb base m vecs c2) ∎ 
+  )
+  
 {-
 linCombLemma 
  :  {n : ℕ}
@@ -513,8 +549,8 @@ linCombLemma
  -> (c2 : Parikh (suc m))
  -> applyLinComb base (suc m) (base ∷ vecs) ((1 ∷ c1) +v c2) ≡ applyLinComb base m vecs c1 +v applyLinComb base (suc m) (base ∷ vecs) c2
 linCombLemma zero base [] [] (x ∷ []) rewrite plusOneDef x | scalarAssoc x 1 base | scalarIdent base = v+-commut ((x ·ₛ base) +v base) base
-linCombLemma (suc m) base (vec1 ∷ vecs) (x₁ ∷ c1) (x₂ ∷ c2) rewrite linCombLemma m base vecs c1 c2 | plusOneDef x₂ | scalarAssoc x₂ 1 base | scalarIdent base  =  {!!} -}
-  {-sym (
+linCombLemma (suc m) base (vec1 ∷ vecs) (x₁ ∷ c1) (x₂ ∷ c2) rewrite linCombLemma m base vecs c1 c2 | plusOneDef x₂ | scalarAssoc x₂ 1 base | scalarIdent base = {!!}
+{-  sym (
     begin 
     ((x₁ ·ₛ vec1) +v applyLinComb base m vecs c1) +v
       ((x₂ ·ₛ base) +v applyLinComb base (suc m) (vec1 ∷ vecs) c2) 
@@ -534,7 +570,7 @@ starExtend .(applyLinComb base m vecs c1) .(applyLinComb base (suc m) (base ∷ 
 starExtend v1 v2 (base , m , vecs) [] .((base , m , vecs) ∷ []) .((base , suc m , base ∷ vecs) ∷ []) refl refl (InHead .v1 .(base , m , vecs) .[] x) (InTail .v2 .(base , suc m , base ∷ vecs) .[] inSS) = {!!}
 starExtend v1 v2 sh [] .(sh ∷ []) ss refl pf2 (InTail .v1 .sh .[] ()) inSS
 starExtend v1 v2 sh (x ∷ st) .(sh ∷ x ∷ st) ss refl pf2 inS inSS = {!!}
-
+-}
 
 
 
