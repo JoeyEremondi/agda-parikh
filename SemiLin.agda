@@ -492,8 +492,8 @@ linCombDecompBase (suc m) base (vec1 ∷ vecs) (c ∷ c1) (cc ∷ c2) rewrite li
     (((c + cc) ·ₛ vec1) +v applyLinComb (base +v v0) m vecs (c1 +v c2)) 
   ≡⟨ cong (λ x → base +v (((c + cc) ·ₛ vec1) +v applyLinComb x m vecs (c1 +v c2))) v0identRight ⟩ 
   base +v (((c + cc) ·ₛ vec1) +v applyLinComb base m vecs (c1 +v c2)) 
-  ≡⟨ {!!} ⟩ 
-  {!!}
+  ≡⟨ cong (λ x → base +v x) refl ⟩ 
+  (base +v (((c + cc) ·ₛ vec1) +v applyLinComb base m vecs (c1 +v c2)) ∎)
 {-  begin 
   ((c ·ₛ vec1) +v (base +v applyLinComb v0 m vecs c1)) +v
     ((cc ·ₛ vec1) +v (base +v applyLinComb v0 m vecs c2)) 
