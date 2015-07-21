@@ -538,6 +538,14 @@ linStarExtend .(applyLinComb base m vecs c1) .((c2h ·ₛ base) +v applyLinComb 
   ≡⟨ v+-commut ((c2h ·ₛ base) +v applyLinComb base m vecs c2) (applyLinComb base m vecs c1) ⟩ applyLinComb base m vecs c1 +v
               ((c2h ·ₛ base) +v applyLinComb base m vecs c2) ∎ 
   )
+
+starExtend : {n : ℕ} -> (v1 v2 : Parikh n ) -> (sh : LinSet n ) -> ( st s ss : SemiLinSet n) -> sh ∷ st ≡ s -> ss ≡ (starSum sh st) ∷ []  -> InSemiLin v1 s -> InSemiLin v2 ss -> InSemiLin (v1 +v v2) ss
+starExtend .(applyLinComb base m vecs c1) .(applyLinComb base (suc m) (base ∷ vecs) c2) (base , m , vecs) [] .((base , m , vecs) ∷ []) .((base , suc m , base ∷ vecs) ∷ []) refl refl (InHead .(applyLinComb base m vecs c1) .(base , m , vecs) .[] (c1 , refl)) (InHead .(applyLinComb base (suc m) (base ∷ vecs) c2) .(base , suc m , base ∷ vecs) .[] (c2 , refl)) = 
+  InHead (applyLinComb base m vecs c1 +v
+            applyLinComb base (suc m) (base ∷ vecs) c2) (base , suc m , base ∷ vecs) [] (linStarExtend (applyLinComb base m vecs c1) (applyLinComb base (suc m) (base ∷ vecs) c2) (base , m , vecs) (base , suc m , base ∷ vecs) refl (c1 , refl) (c2 , refl))
+starExtend v1 v2 (base , m , vecs) [] .((base , m , vecs) ∷ []) .((base , suc m , base ∷ vecs) ∷ []) refl refl (InHead .v1 .(base , m , vecs) .[] x) (InTail .v2 .(base , suc m , base ∷ vecs) .[] ())
+starExtend v1 v2 sh [] .(sh ∷ []) ss refl pf2 (InTail .v1 .sh .[] ()) inSS
+starExtend v1 v2 sh (x ∷ st) .(sh ∷ x ∷ st) ss refl pf2 inS inSS = {!!}
   
 {-
 linCombLemma 
@@ -564,12 +572,7 @@ linCombLemma (suc m) base (vec1 ∷ vecs) (x₁ ∷ c1) (x₂ ∷ c2) rewrite li
     ≡⟨ {!!} ⟩ 
     {!!}) -}
 
-starExtend : {n : ℕ} -> (v1 v2 : Parikh n ) -> (sh : LinSet n ) -> ( st s ss : SemiLinSet n) -> sh ∷ st ≡ s -> ss ≡ (starSum sh st) ∷ []  -> InSemiLin v1 s -> InSemiLin v2 ss -> InSemiLin (v1 +v v2) ss
-starExtend .(applyLinComb base m vecs c1) .(applyLinComb base (suc m) (base ∷ vecs) c2) (base , m , vecs) [] .((base , m , vecs) ∷ []) .((base , suc m , base ∷ vecs) ∷ []) refl refl (InHead .(applyLinComb base m vecs c1) .(base , m , vecs) .[] (c1 , refl)) (InHead .(applyLinComb base (suc m) (base ∷ vecs) c2) .(base , suc m , base ∷ vecs) .[] (c2 , refl)) = InHead (applyLinComb base m vecs c1 +v
-                                                                                                                                                                                                                                                                                                                                                                                  applyLinComb base (suc m) (base ∷ vecs) c2) (base , suc m , base ∷ vecs) [] (((1 ∷ c1) +v c2) , {!!})
-starExtend v1 v2 (base , m , vecs) [] .((base , m , vecs) ∷ []) .((base , suc m , base ∷ vecs) ∷ []) refl refl (InHead .v1 .(base , m , vecs) .[] x) (InTail .v2 .(base , suc m , base ∷ vecs) .[] inSS) = {!!}
-starExtend v1 v2 sh [] .(sh ∷ []) ss refl pf2 (InTail .v1 .sh .[] ()) inSS
-starExtend v1 v2 sh (x ∷ st) .(sh ∷ x ∷ st) ss refl pf2 inS inSS = {!!}
+
 -}
 
 
