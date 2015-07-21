@@ -539,13 +539,40 @@ linStarExtend .(applyLinComb base m vecs c1) .((c2h ·ₛ base) +v applyLinComb 
               ((c2h ·ₛ base) +v applyLinComb base m vecs c2) ∎ 
   )
 
-starExtend : {n : ℕ} -> (v1 v2 : Parikh n ) -> (sh : LinSet n ) -> ( st s ss : SemiLinSet n) -> sh ∷ st ≡ s -> ss ≡ (starSum sh st) ∷ []  -> InSemiLin v1 s -> InSemiLin v2 ss -> InSemiLin (v1 +v v2) ss
+starExtend 
+  :  {n : ℕ}
+  -> (v1 v2 : Parikh n )
+  -> (sh : LinSet n )
+  -> ( st s ss : SemiLinSet n)
+  -> sh ∷ st ≡ s
+  -> ss ≡ (starSum sh st) ∷ []
+  -> InSemiLin v1 s
+  -> InSemiLin v2 ss
+  -> InSemiLin (v1 +v v2) ss
 starExtend .(applyLinComb base m vecs c1) .(applyLinComb base (suc m) (base ∷ vecs) c2) (base , m , vecs) [] .((base , m , vecs) ∷ []) .((base , suc m , base ∷ vecs) ∷ []) refl refl (InHead .(applyLinComb base m vecs c1) .(base , m , vecs) .[] (c1 , refl)) (InHead .(applyLinComb base (suc m) (base ∷ vecs) c2) .(base , suc m , base ∷ vecs) .[] (c2 , refl)) = 
   InHead (applyLinComb base m vecs c1 +v
             applyLinComb base (suc m) (base ∷ vecs) c2) (base , suc m , base ∷ vecs) [] (linStarExtend (applyLinComb base m vecs c1) (applyLinComb base (suc m) (base ∷ vecs) c2) (base , m , vecs) (base , suc m , base ∷ vecs) refl (c1 , refl) (c2 , refl))
 starExtend v1 v2 (base , m , vecs) [] .((base , m , vecs) ∷ []) .((base , suc m , base ∷ vecs) ∷ []) refl refl (InHead .v1 .(base , m , vecs) .[] x) (InTail .v2 .(base , suc m , base ∷ vecs) .[] ())
 starExtend v1 v2 sh [] .(sh ∷ []) ss refl pf2 (InTail .v1 .sh .[] ()) inSS
-starExtend v1 v2 sh (x ∷ st) .(sh ∷ x ∷ st) ss refl pf2 inS inSS = {!!}
+
+starExtend .(applyLinComb hbase hm hvecs hcomb) v2 (hbase , hm , hvecs) ((tbase , tm , tvecs) ∷ st) .((hbase , hm , hvecs) ∷ (tbase , tm , tvecs) ∷ st) .((tbase +v proj₁ (starSum (hbase , hm , hvecs) st) , suc (tm + proj₁ (proj₂ (starSum (hbase , hm , hvecs) st))) , tbase ∷ tvecs Data.Vec.++ proj₂ (proj₂ (starSum (hbase , hm , hvecs) st))) ∷ []) refl refl (InHead .(applyLinComb hbase hm hvecs hcomb) .(hbase , hm , hvecs) .((tbase , tm , tvecs) ∷ st) (hcomb , refl)) (InHead .v2 .(tbase +v proj₁ (starSum (hbase , hm , hvecs) st) , suc (tm + proj₁ (proj₂ (starSum (hbase , hm , hvecs) st))) , tbase ∷ tvecs Data.Vec.++ proj₂ (proj₂ (starSum (hbase , hm , hvecs) st))) .[] (combVecs , cpf)) = {!!}
+
+starExtend v1 v2 (hbase , hm , hvecs) ((tbase , tm , tvecs) ∷ st) .((hbase , hm , hvecs) ∷ (tbase , tm , tvecs) ∷ st) .((tbase +v proj₁ (starSum (hbase , hm , hvecs) st) , suc (tm + proj₁ (proj₂ (starSum (hbase , hm , hvecs) st))) , tbase ∷ tvecs Data.Vec.++ proj₂ (proj₂ (starSum (hbase , hm , hvecs) st))) ∷ []) refl refl (InTail .v1 .(hbase , hm , hvecs) .((tbase , tm , tvecs) ∷ st) inS) (InHead .v2 .(tbase +v proj₁ (starSum (hbase , hm , hvecs) st) , suc (tm + proj₁ (proj₂ (starSum (hbase , hm , hvecs) st))) , tbase ∷ tvecs Data.Vec.++ proj₂ (proj₂ (starSum (hbase , hm , hvecs) st))) .[] (combVecs , cpf)) = {!!}
+
+
+starExtend v1 v2 (hbase , hm , hvecs) ((tbase , tm , tvecs) ∷ st) .((hbase , hm , hvecs) ∷ (tbase , tm , tvecs) ∷ st) .((tbase +v proj₁ (starSum (hbase , hm , hvecs) st) , suc (tm + proj₁ (proj₂ (starSum (hbase , hm , hvecs) st))) , tbase ∷ tvecs Data.Vec.++ proj₂ (proj₂ (starSum (hbase , hm , hvecs) st))) ∷ []) refl refl inS (InTail .v2 .(tbase +v proj₁ (starSum (hbase , hm , hvecs) st) , suc (tm + proj₁ (proj₂ (starSum (hbase , hm , hvecs) st))) , tbase ∷ tvecs Data.Vec.++ proj₂ (proj₂ (starSum (hbase , hm , hvecs) st))) .[] ()) 
+
+--InHead (v1 +v v2) (linStar (tbase , tm , tvecs) +l starSum (hbase , hm , hvecs) st) [] {!!}
+
+linStarDecomp
+ :  {n : ℕ}
+ -> (v : Parikh n)
+ -> (l ls : LinSet n)
+ -> ls ≡ linStar l
+ -> LinComb v ls
+ -> LinComb v l ⊎ (∃ λ v1 -> ∃ λ v2 -> v1 +v v2 ≡ v × LinComb v1 l × LinComb v2 ls  ) 
+linStarDecomp .((0 ·ₛ base) +v applyLinComb base m vecs c) (base , m , vecs) .(base , suc m , base ∷ vecs) refl (zero ∷ c , refl) rewrite scalar0ident base  = inj₁ (c , (sym v0identLeft))
+linStarDecomp .((suc cbase ·ₛ base) +v applyLinComb base m vecs c) (base , m , vecs) .(base , suc m , base ∷ vecs) refl (suc cbase ∷ c , refl) = {!!}
   
 {-
 linCombLemma 
