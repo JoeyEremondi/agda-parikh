@@ -416,6 +416,9 @@ linCombRemoveBase {n} m base vecs c =
   ≡⟨ baseSplit base v0 m vecs c ⟩
   base +v applyLinComb v0 m vecs c ∎
 
+emptyCombZero : {n : ℕ} -> (v : Parikh n ) -> LinComb v (v0 , 0 , []) -> v ≡ v0
+emptyCombZero .v0 ([] , refl) = refl
+
 linCombDecompBase 
  :  {n : ℕ}
  -> (m : ℕ )
@@ -597,7 +600,34 @@ linStarDecomp .((suc cbase ·ₛ base) +v applyLinComb base m vecs c) (base , m 
     ≡⟨ refl ⟩ 
     (base +v ((cbase ·ₛ base) +v applyLinComb base m vecs c) ∎))) ,
   (v0 , linContainsBase base m vecs) , (cbase ∷ c) , refl )
-  
+
+--TODO document Roadmap to the sourcecode:
+--Messy code is typical? 
+-- i.e. compilcated pattern matches, dotted
+-- can replace by ._
+-- Agda TH type system
+-- related to auto in agda
+-- auto-generate
+-- ICPF Haskell symposium, 
+
+starDecomp
+ :  {n : ℕ}
+ -> (v : Parikh n)
+ -> (sh : LinSet n )
+ -> (st s ss : SemiLinSet n)
+ -> v ≢ v0
+ -> s ≡ sh ∷ st
+ -> ss ≡ starSemiLin sh st
+ -> InSemiLin v ss
+ -> (∃ λ v1 -> ∃ λ v2 -> v1 +v v2 ≡ v × InSemiLin v1 s × InSemiLin v2 ss  ) 
+starDecomp v sh st .(sh ∷ st) .((v0 , 0 , []) ∷ starSum sh st ∷ []) vpf refl refl (InHead .v .(v0 , 0 , []) .(starSum sh st ∷ []) x) with emptyCombZero v x | vpf (emptyCombZero v x)
+starDecomp .v0 sh st .(sh ∷ st) .((v0 , zero , []) ∷ [] Data.List.++ starSum sh st ∷ []) vpf refl refl (InHead .v0 .(v0 , zero , []) .(starSum sh st ∷ []) x) | refl | ()
+--starDecomp v sh st .(sh ∷ st) .((v0 , 0 , []) ∷ starSum sh st ∷ []) vpf refl refl (InHead .v .(v0 , 0 , []) .(starSum sh st ∷ []) x) | zeroPf = {!!}
+starDecomp v sh [] .(sh ∷ []) .((v0 , 0 , []) ∷ (proj₁ sh , suc (proj₁ (proj₂ sh)) , proj₁ sh ∷ proj₂ (proj₂ sh)) ∷ []) vpf refl refl (InTail .v .(v0 , 0 , []) .((proj₁ sh , suc (proj₁ (proj₂ sh)) , proj₁ sh ∷ proj₂ (proj₂ sh)) ∷ []) (InHead .v .(proj₁ sh , suc (proj₁ (proj₂ sh)) , proj₁ sh ∷ proj₂ (proj₂ sh)) .[] starComb)) with linStarDecomp v sh _ refl starComb
+starDecomp v sh [] .(sh ∷ []) .((v0 , zero , []) ∷ [] Data.List.++ starSum sh [] ∷ []) vpf refl refl (InTail .v .(v0 , zero , []) .(starSum sh [] ∷ []) (InHead .v .(proj₁ sh , suc (proj₁ (proj₂ sh)) , proj₁ sh ∷ proj₂ (proj₂ sh)) .[] starComb)) | inj₁ lComb = v , v0 , v0identRight , InHead v sh [] lComb , InHead v0 (v0 , zero , []) _ (v0 , refl)
+starDecomp v sh [] .(sh ∷ []) .((v0 , zero , []) ∷ [] Data.List.++ starSum sh [] ∷ []) vpf refl refl (InTail .v .(v0 , zero , []) .(starSum sh [] ∷ []) (InHead .v .(proj₁ sh , suc (proj₁ (proj₂ sh)) , proj₁ sh ∷ proj₂ (proj₂ sh)) .[] starComb)) | inj₂ (v1 , v2 , sumPf , comb1 , comb2 ) = v1 , v2 , sumPf , InHead v1 sh [] comb1 ,  InTail v2 (v0 , zero , []) _ (InHead v2 _ [] comb2)
+starDecomp v sh [] .(sh ∷ []) .((v0 , 0 , []) ∷ (proj₁ sh , suc (proj₁ (proj₂ sh)) , proj₁ sh ∷ proj₂ (proj₂ sh)) ∷ []) vpf refl refl (InTail .v .(v0 , 0 , []) .((proj₁ sh , suc (proj₁ (proj₂ sh)) , proj₁ sh ∷ proj₂ (proj₂ sh)) ∷ []) (InTail .v .(proj₁ sh , suc (proj₁ (proj₂ sh)) , proj₁ sh ∷ proj₂ (proj₂ sh)) .[] ()))
+starDecomp v sh (x ∷ st) .(sh ∷ x ∷ st) .((v0 , 0 , []) ∷ (proj₁ x +v proj₁ (starSum sh st) , suc (proj₁ (proj₂ x) + proj₁ (proj₂ (starSum sh st))) , proj₁ x ∷ proj₂ (proj₂ x) Data.Vec.++ proj₂ (proj₂ (starSum sh st))) ∷ []) vpf refl refl (InTail .v .(v0 , 0 , []) .((proj₁ x +v proj₁ (starSum sh st) , suc (proj₁ (proj₂ x) + proj₁ (proj₂ (starSum sh st))) , proj₁ x ∷ proj₂ (proj₂ x) Data.Vec.++ proj₂ (proj₂ (starSum sh st))) ∷ []) inSemi) = {!!}
 {-
 linCombLemma 
  :  {n : ℕ}
