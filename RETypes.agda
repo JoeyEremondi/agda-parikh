@@ -1,3 +1,10 @@
+{-
+Joseph Eremondi
+Utrecht University Capita Selecta
+UU# 4229924
+July 22, 2015
+-}
+
 module RETypes where
 
 open import Data.Char
@@ -7,57 +14,50 @@ open import Relation.Binary.PropositionalEquality
 
 open import Data.Product
 
-
+--Tag for whether an RE can match the empty string or not
 data Null? : Set where
   NonNull : Null?
   MaybeNull : Null?
 
+--Equivalent of AND for Nullable
 data NullTop : Null? -> Null? -> Null? -> Set where
   BothNullT : NullTop MaybeNull MaybeNull MaybeNull
   LeftNullT : NullTop MaybeNull NonNull NonNull
   RightNullT : NullTop NonNull MaybeNull NonNull
   BothNonNullT : NullTop NonNull NonNull NonNull
 
+--Equivalent of OR for null
 data NullBottom : Null? -> Null? -> Null? -> Set where
   BothNullB : NullBottom NonNull NonNull NonNull
   LeftNullB : NullBottom MaybeNull NonNull MaybeNull
   RightNullB : NullBottom NonNull MaybeNull MaybeNull
   BothNonNullB : NullBottom MaybeNull MaybeNull MaybeNull
 
-{-
-nullTop : Null? -> Null? -> Null?
-nullTop MaybeNull MaybeNull = MaybeNull
-nullTop _ _ = NonNull
-
-nullBottom : Null? -> Null? -> Null?
-nullBottom NonNull NonNull = NonNull
-nullBottom _ _ = MaybeNull
--}
 
 
---TODO when define this way, problem have function defined
---needs to unify with function type to figure out if there is branch
---Unifies with return type of RE
---Plus: unifies RE nullBottom with RE maybe
---Change last line of plus into
+--Standard definition of regular expressions
+--plus nullable tags. Star can only accept non-nullable REs.
 data RE : Null? -> Set where
   ε : RE MaybeNull
   ∅ : RE NonNull 
   Lit : Char -> RE NonNull 
+  --Union is nullable if either input is nullable
   _+_ : {n1 n2 n3 : Null? } 
     -> {nb : NullBottom n1 n2 n3} 
     -> RE n1
     -> RE n2 
     -> RE n3
+  --Concatenation is nullable only if both inputs are nullable
   _·_ :  {n1 n2 n3 : Null? } 
     -> {nt : NullTop n1 n2 n3} 
     -> RE n1
     -> RE n2 
     -> RE n3
+  --Star always matches the empty string
   _* : RE NonNull -> RE MaybeNull
 
 
-
+--Witness type, defining what it means for a word to match a regular expression
 data REMatch : {n : Null?} -> List Char -> RE n -> Set where
   EmptyMatch : REMatch [] ε
   LitMatch : (c : Char) -> REMatch (c ∷ []) (Lit c)
@@ -96,6 +96,7 @@ extendRightNonNull .(c ∷ t) sRest (c , t , refl) = c , t ++ sRest , refl
 extendLeftNonNull : (s : List Char) -> (sRest : List Char) -> (∃ λ c -> ∃ λ t -> (s ≡ c ∷ t)) -> (∃ λ c1 -> ∃ λ t1 -> (sRest ++ s ≡ c1 ∷ t1))
 extendLeftNonNull .(t ∷ c) [] (t , c , refl) = t , c , refl
 extendLeftNonNull .(t ∷ c) (x ∷ sRest) (t , c , refl)  = x , sRest ++ t ∷ c , refl
+
 
 nullCorrect : (r : RE NonNull ) -> (s : List Char) -> REMatch s r -> ∃ λ c -> ∃ λ t -> (s ≡ c ∷ t)
 nullCorrect .(Lit c) .(c ∷ []) (LitMatch c) = c , [] , refl

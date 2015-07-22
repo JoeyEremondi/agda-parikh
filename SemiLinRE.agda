@@ -1,3 +1,10 @@
+{-
+Joseph Eremondi
+Utrecht University Capita Selecta
+UU# 4229924
+July 22, 2015
+-}
+
 module SemiLinRE where
 
 open import Data.Vec
