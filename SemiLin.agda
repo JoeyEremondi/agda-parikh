@@ -286,16 +286,18 @@ starSum ls [] = linStar ls
 starSum first (sh ∷ s) = (linStar sh) +l starSum first s
 
 
-starSemiLin : {n : ℕ} -> LinSet n -> SemiLinSet n -> SemiLinSet n
-starSemiLin first s = s0 Data.List.++ (  starSum first s ∷ [])
+starSemiLin : {n : ℕ} -> SemiLinSet n -> SemiLinSet n
+starSemiLin [] = s0
+starSemiLin (first ∷ s) = s0 Data.List.++ (  starSum first s ∷ [])
 
 
 starSumOneEmpty : {n : ℕ} -> (l : LinSet n) -> (ls : LinSet n) -> ls ≡ starSum l [] -> (proj₁ (proj₂ ls) ≡ suc (proj₁ (proj₂ l) ) )
 starSumOneEmpty l .(proj₁ l , suc (proj₁ (proj₂ l)) , proj₁ l ∷ proj₂ (proj₂ l)) refl = refl
 
 
-zeroInStar : {n : ℕ} -> (sh : LinSet n) -> (st ss : SemiLinSet n) -> ss ≡ (starSemiLin sh st)  -> InSemiLin v0 ss
-zeroInStar sh st .((v0 , 0 , []) ∷ starSum sh st ∷ []) refl = InHead v0 (v0 , zero , []) (starSum sh st ∷ []) ([] , refl)
+zeroInStar : {n : ℕ} -> (s ss : SemiLinSet n) -> ss ≡ (starSemiLin s)  -> InSemiLin v0 ss
+zeroInStar [] .((v0 , 0 , []) ∷ []) refl = InHead v0 (v0 , zero , []) [] ([] , refl)
+zeroInStar (x ∷ s) .((v0 , 0 , []) ∷ starSum x s ∷ []) refl = InHead v0 (v0 , zero , []) (starSum x s ∷ []) ([] , refl)
 
 
 linSetLen : {n : ℕ} -> (l1 l2 l3 : LinSet n) -> l1 +l l2 ≡ l3 -> (proj₁ (proj₂ l3)) ≡ (proj₁ (proj₂ l1)) + (proj₁ (proj₂ l2))
@@ -428,7 +430,7 @@ linCombDecompBase
  -> (c2 : Parikh m)
  -> (applyLinComb base m vecs c1 ) +v (applyLinComb base m vecs c2 ) ≡ base +v applyLinComb base m vecs (c1 +v c2)
 linCombDecompBase .0 base [] c1 c2 = refl
-linCombDecompBase (suc m) base (vec1 ∷ vecs) (c ∷ c1) (cc ∷ c2) rewrite linCombDecompBase m base vecs c1 c2 | linCombRemoveBase m base vecs c1 | linCombRemoveBase m base vecs c2 | sym vAssoc   = 
+linCombDecompBase (suc m) base (vec1 ∷ vecs) (c ∷ c1) (cc ∷ c2) rewrite linCombDecompBase m base vecs c1 c2 | linCombRemoveBase m base vecs c1 | linCombRemoveBase m base vecs c2   = 
   begin 
   ((c ·ₛ vec1) +v (base +v applyLinComb v0 m vecs c1)) +v
     ((cc ·ₛ vec1) +v (base +v applyLinComb v0 m vecs c2)) 
@@ -552,28 +554,6 @@ linStarExtend .(applyLinComb base m vecs c1) .((c2h ·ₛ base) +v applyLinComb 
               ((c2h ·ₛ base) +v applyLinComb base m vecs c2) ∎ 
   )
 
-starExtend 
-  :  {n : ℕ}
-  -> (v1 v2 : Parikh n )
-  -> (sh : LinSet n )
-  -> ( st s ss : SemiLinSet n)
-  -> sh ∷ st ≡ s
-  -> ss ≡ (starSum sh st) ∷ []
-  -> InSemiLin v1 s
-  -> InSemiLin v2 ss
-  -> InSemiLin (v1 +v v2) ss
-starExtend .(applyLinComb base m vecs c1) .(applyLinComb base (suc m) (base ∷ vecs) c2) (base , m , vecs) [] .((base , m , vecs) ∷ []) .((base , suc m , base ∷ vecs) ∷ []) refl refl (InHead .(applyLinComb base m vecs c1) .(base , m , vecs) .[] (c1 , refl)) (InHead .(applyLinComb base (suc m) (base ∷ vecs) c2) .(base , suc m , base ∷ vecs) .[] (c2 , refl)) = 
-  InHead (applyLinComb base m vecs c1 +v
-            applyLinComb base (suc m) (base ∷ vecs) c2) (base , suc m , base ∷ vecs) [] (linStarExtend (applyLinComb base m vecs c1) (applyLinComb base (suc m) (base ∷ vecs) c2) (base , m , vecs) (base , suc m , base ∷ vecs) refl (c1 , refl) (c2 , refl))
-starExtend v1 v2 (base , m , vecs) [] .((base , m , vecs) ∷ []) .((base , suc m , base ∷ vecs) ∷ []) refl refl (InHead .v1 .(base , m , vecs) .[] x) (InTail .v2 .(base , suc m , base ∷ vecs) .[] ())
-starExtend v1 v2 sh [] .(sh ∷ []) ss refl pf2 (InTail .v1 .sh .[] ()) inSS
-
-starExtend .(applyLinComb hbase hm hvecs hcomb) v2 (hbase , hm , hvecs) ((tbase , tm , tvecs) ∷ st) .((hbase , hm , hvecs) ∷ (tbase , tm , tvecs) ∷ st) .((tbase +v proj₁ (starSum (hbase , hm , hvecs) st) , suc (tm + proj₁ (proj₂ (starSum (hbase , hm , hvecs) st))) , tbase ∷ tvecs Data.Vec.++ proj₂ (proj₂ (starSum (hbase , hm , hvecs) st))) ∷ []) refl refl (InHead .(applyLinComb hbase hm hvecs hcomb) .(hbase , hm , hvecs) .((tbase , tm , tvecs) ∷ st) (hcomb , refl)) (InHead .v2 .(tbase +v proj₁ (starSum (hbase , hm , hvecs) st) , suc (tm + proj₁ (proj₂ (starSum (hbase , hm , hvecs) st))) , tbase ∷ tvecs Data.Vec.++ proj₂ (proj₂ (starSum (hbase , hm , hvecs) st))) .[] (combVecs , cpf)) = {!!}
-
-starExtend v1 v2 (hbase , hm , hvecs) ((tbase , tm , tvecs) ∷ st) .((hbase , hm , hvecs) ∷ (tbase , tm , tvecs) ∷ st) .((tbase +v proj₁ (starSum (hbase , hm , hvecs) st) , suc (tm + proj₁ (proj₂ (starSum (hbase , hm , hvecs) st))) , tbase ∷ tvecs Data.Vec.++ proj₂ (proj₂ (starSum (hbase , hm , hvecs) st))) ∷ []) refl refl (InTail .v1 .(hbase , hm , hvecs) .((tbase , tm , tvecs) ∷ st) inS) (InHead .v2 .(tbase +v proj₁ (starSum (hbase , hm , hvecs) st) , suc (tm + proj₁ (proj₂ (starSum (hbase , hm , hvecs) st))) , tbase ∷ tvecs Data.Vec.++ proj₂ (proj₂ (starSum (hbase , hm , hvecs) st))) .[] (combVecs , cpf)) = {!!}
-
-
-starExtend v1 v2 (hbase , hm , hvecs) ((tbase , tm , tvecs) ∷ st) .((hbase , hm , hvecs) ∷ (tbase , tm , tvecs) ∷ st) .((tbase +v proj₁ (starSum (hbase , hm , hvecs) st) , suc (tm + proj₁ (proj₂ (starSum (hbase , hm , hvecs) st))) , tbase ∷ tvecs Data.Vec.++ proj₂ (proj₂ (starSum (hbase , hm , hvecs) st))) ∷ []) refl refl inS (InTail .v2 .(tbase +v proj₁ (starSum (hbase , hm , hvecs) st) , suc (tm + proj₁ (proj₂ (starSum (hbase , hm , hvecs) st))) , tbase ∷ tvecs Data.Vec.++ proj₂ (proj₂ (starSum (hbase , hm , hvecs) st))) .[] ()) 
 
 --InHead (v1 +v v2) (linStar (tbase , tm , tvecs) +l starSum (hbase , hm , hvecs) st) [] {!!}
 
@@ -581,11 +561,13 @@ linStarDecomp
  :  {n : ℕ}
  -> (v : Parikh n)
  -> (l ls : LinSet n)
+ -> v ≢ v0
+ -> proj₁ (l) ≢ v0
  -> ls ≡ linStar l
  -> LinComb v ls
- -> LinComb v l ⊎ (∃ λ v1 -> ∃ λ v2 -> v1 +v v2 ≡ v × LinComb v1 l × LinComb v2 ls  ) 
-linStarDecomp .((0 ·ₛ base) +v applyLinComb base m vecs c) (base , m , vecs) .(base , suc m , base ∷ vecs) refl (zero ∷ c , refl) rewrite scalar0ident base  = inj₁ (c , (sym v0identLeft))
-linStarDecomp .((suc cbase ·ₛ base) +v applyLinComb base m vecs c) (base , m , vecs) .(base , suc m , base ∷ vecs) refl (suc cbase ∷ c , refl) = inj₂ (base , applyLinComb base (suc m) (base ∷ vecs) (cbase ∷ c) , 
+ -> LinComb v l ⊎ (∃ λ v1 -> ∃ λ v2 -> v1 +v v2 ≡ v × LinComb v1 l × LinComb v2 ls × v1 ≢ v0 ) 
+linStarDecomp .((0 ·ₛ base) +v applyLinComb base m vecs c) (base , m , vecs) .(base , suc m , base ∷ vecs) vnz bnz refl (zero ∷ c , refl) rewrite scalar0ident base  = inj₁ (c , (sym v0identLeft))
+linStarDecomp .((suc cbase ·ₛ base) +v applyLinComb base m vecs c) (base , m , vecs) .(base , suc m , base ∷ vecs) vnz bnz refl (suc cbase ∷ c , refl) = inj₂ ( base , (applyLinComb base (suc m) (base ∷ vecs) (cbase ∷ c)) , 
   (sym (begin -- ? ≡⟨ ? ⟩ ? 
     (suc cbase ·ₛ base) +v applyLinComb base m vecs c 
     ≡⟨ cong (λ x → x +v applyLinComb base m vecs c) refl ⟩ 
@@ -599,62 +581,8 @@ linStarDecomp .((suc cbase ·ₛ base) +v applyLinComb base m vecs c) (base , m 
     base +v ((cbase ·ₛ base) +v applyLinComb base m vecs c) 
     ≡⟨ refl ⟩ 
     (base +v ((cbase ·ₛ base) +v applyLinComb base m vecs c) ∎))) ,
-  (v0 , linContainsBase base m vecs) , (cbase ∷ c) , refl )
+  (v0 , linContainsBase base m vecs) , ((cbase ∷ c) , refl) , bnz )
 
---TODO document Roadmap to the sourcecode:
---Messy code is typical? 
--- i.e. compilcated pattern matches, dotted
--- can replace by ._
--- Agda TH type system
--- related to auto in agda
--- auto-generate
--- ICPF Haskell symposium, 
-
-starDecomp
- :  {n : ℕ}
- -> (v : Parikh n)
- -> (sh : LinSet n )
- -> (st s ss : SemiLinSet n)
- -> v ≢ v0
- -> s ≡ sh ∷ st
- -> ss ≡ starSemiLin sh st
- -> InSemiLin v ss
- -> (∃ λ v1 -> ∃ λ v2 -> v1 +v v2 ≡ v × InSemiLin v1 s × InSemiLin v2 ss  ) 
-starDecomp v sh st .(sh ∷ st) .((v0 , 0 , []) ∷ starSum sh st ∷ []) vpf refl refl (InHead .v .(v0 , 0 , []) .(starSum sh st ∷ []) x) with emptyCombZero v x | vpf (emptyCombZero v x)
-starDecomp .v0 sh st .(sh ∷ st) .((v0 , zero , []) ∷ [] Data.List.++ starSum sh st ∷ []) vpf refl refl (InHead .v0 .(v0 , zero , []) .(starSum sh st ∷ []) x) | refl | ()
---starDecomp v sh st .(sh ∷ st) .((v0 , 0 , []) ∷ starSum sh st ∷ []) vpf refl refl (InHead .v .(v0 , 0 , []) .(starSum sh st ∷ []) x) | zeroPf = {!!}
-starDecomp v sh [] .(sh ∷ []) .((v0 , 0 , []) ∷ (proj₁ sh , suc (proj₁ (proj₂ sh)) , proj₁ sh ∷ proj₂ (proj₂ sh)) ∷ []) vpf refl refl (InTail .v .(v0 , 0 , []) .((proj₁ sh , suc (proj₁ (proj₂ sh)) , proj₁ sh ∷ proj₂ (proj₂ sh)) ∷ []) (InHead .v .(proj₁ sh , suc (proj₁ (proj₂ sh)) , proj₁ sh ∷ proj₂ (proj₂ sh)) .[] starComb)) with linStarDecomp v sh _ refl starComb
-starDecomp v sh [] .(sh ∷ []) .((v0 , zero , []) ∷ [] Data.List.++ starSum sh [] ∷ []) vpf refl refl (InTail .v .(v0 , zero , []) .(starSum sh [] ∷ []) (InHead .v .(proj₁ sh , suc (proj₁ (proj₂ sh)) , proj₁ sh ∷ proj₂ (proj₂ sh)) .[] starComb)) | inj₁ lComb = v , v0 , v0identRight , InHead v sh [] lComb , InHead v0 (v0 , zero , []) _ (v0 , refl)
-starDecomp v sh [] .(sh ∷ []) .((v0 , zero , []) ∷ [] Data.List.++ starSum sh [] ∷ []) vpf refl refl (InTail .v .(v0 , zero , []) .(starSum sh [] ∷ []) (InHead .v .(proj₁ sh , suc (proj₁ (proj₂ sh)) , proj₁ sh ∷ proj₂ (proj₂ sh)) .[] starComb)) | inj₂ (v1 , v2 , sumPf , comb1 , comb2 ) = v1 , v2 , sumPf , InHead v1 sh [] comb1 ,  InTail v2 (v0 , zero , []) _ (InHead v2 _ [] comb2)
-starDecomp v sh [] .(sh ∷ []) .((v0 , 0 , []) ∷ (proj₁ sh , suc (proj₁ (proj₂ sh)) , proj₁ sh ∷ proj₂ (proj₂ sh)) ∷ []) vpf refl refl (InTail .v .(v0 , 0 , []) .((proj₁ sh , suc (proj₁ (proj₂ sh)) , proj₁ sh ∷ proj₂ (proj₂ sh)) ∷ []) (InTail .v .(proj₁ sh , suc (proj₁ (proj₂ sh)) , proj₁ sh ∷ proj₂ (proj₂ sh)) .[] ()))
-starDecomp v sh (x ∷ st) .(sh ∷ x ∷ st) .((v0 , 0 , []) ∷ (proj₁ x +v proj₁ (starSum sh st) , suc (proj₁ (proj₂ x) + proj₁ (proj₂ (starSum sh st))) , proj₁ x ∷ proj₂ (proj₂ x) Data.Vec.++ proj₂ (proj₂ (starSum sh st))) ∷ []) vpf refl refl (InTail .v .(v0 , 0 , []) .((proj₁ x +v proj₁ (starSum sh st) , suc (proj₁ (proj₂ x) + proj₁ (proj₂ (starSum sh st))) , proj₁ x ∷ proj₂ (proj₂ x) Data.Vec.++ proj₂ (proj₂ (starSum sh st))) ∷ []) inSemi) = {!!}
-{-
-linCombLemma 
- :  {n : ℕ}
- -> (m : ℕ )
- -> (base : Parikh n )
- -> (vecs : Vec (Parikh n) m )
- -> (c1 : Parikh m )
- -> (c2 : Parikh (suc m))
- -> applyLinComb base (suc m) (base ∷ vecs) ((1 ∷ c1) +v c2) ≡ applyLinComb base m vecs c1 +v applyLinComb base (suc m) (base ∷ vecs) c2
-linCombLemma zero base [] [] (x ∷ []) rewrite plusOneDef x | scalarAssoc x 1 base | scalarIdent base = v+-commut ((x ·ₛ base) +v base) base
-linCombLemma (suc m) base (vec1 ∷ vecs) (x₁ ∷ c1) (x₂ ∷ c2) rewrite linCombLemma m base vecs c1 c2 | plusOneDef x₂ | scalarAssoc x₂ 1 base | scalarIdent base = {!!}
-{-  sym (
-    begin 
-    ((x₁ ·ₛ vec1) +v applyLinComb base m vecs c1) +v
-      ((x₂ ·ₛ base) +v applyLinComb base (suc m) (vec1 ∷ vecs) c2) 
-    ≡⟨ v+-commut ((x₁ ·ₛ vec1) +v applyLinComb base m vecs c1) ((x₂ ·ₛ base) +v applyLinComb base (suc m) (vec1 ∷ vecs) c2) ⟩ 
-    ((x₂ ·ₛ base) +v applyLinComb base (suc m) (vec1 ∷ vecs) c2) +v
-      ((x₁ ·ₛ vec1) +v applyLinComb base m vecs c1) 
-    ≡⟨ vAssoc ⟩ 
-    (x₂ ·ₛ base) +v
-      (applyLinComb base (suc m) (vec1 ∷ vecs) c2 +v
-       ((x₁ ·ₛ vec1) +v applyLinComb base m vecs c1)) 
-    ≡⟨ {!!} ⟩ 
-    {!!}) -}
-
-
--}
 
 
 

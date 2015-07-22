@@ -44,6 +44,35 @@ open import Data.Nat.Properties.Simple
 module VecNatEq = Data.Vec.Equality.DecidableEquality (Relation.Binary.PropositionalEquality.decSetoid Data.Nat._≟_)
 
 
+starExtend 
+  :  {n : ℕ}
+  -> (v1 v2 : Parikh n )
+  -> ( s ss : SemiLinSet n)
+  -> ss ≡ starSemiLin s
+  -> InSemiLin v1 s
+  -> InSemiLin v2 ss
+  -> InSemiLin (v1 +v v2) (starSemiLin s)
+starExtend v1 v2 s ss spf inS inSS = {!!}
+
+
+starDecomp
+ :  {n : ℕ}
+ -> (v : Parikh n)
+ -> (s ss : SemiLinSet n)
+ -> v ≢ v0
+ -> ss ≡ starSemiLin s
+ -> InSemiLin v ss
+ -> (∃ λ v1 -> ∃ λ v2 -> v1 +v v2 ≡ v × InSemiLin v1 s × InSemiLin v2 ss × v1 ≢ v0  ) 
+starDecomp v s ss vpf spf inSemi = {!!}
+{-
+starDecomp v sh st .(sh ∷ st) .((v0 , 0 , []) ∷ starSum sh st ∷ []) vnz refl refl (InHead .v .(v0 , 0 , []) .(starSum sh st ∷ []) x) with emptyCombZero v x | vnz (emptyCombZero v x)
+starDecomp .v0 sh st .(sh ∷ st) .((v0 , zero , []) ∷ [] Data.List.++ starSum sh st ∷ []) vnz refl refl (InHead .v0 .(v0 , zero , []) .(starSum sh st ∷ []) x) | refl | ()
+starDecomp v sh [] .(sh ∷ []) .((v0 , 0 , []) ∷ (proj₁ sh , suc (proj₁ (proj₂ sh)) , proj₁ sh ∷ proj₂ (proj₂ sh)) ∷ []) vnz refl refl (InTail .v .(v0 , 0 , []) .((proj₁ sh , suc (proj₁ (proj₂ sh)) , proj₁ sh ∷ proj₂ (proj₂ sh)) ∷ []) (InHead .v .(proj₁ sh , suc (proj₁ (proj₂ sh)) , proj₁ sh ∷ proj₂ (proj₂ sh)) .[] starComb)) with linStarDecomp v sh _ vnz {!!} refl starComb
+starDecomp v sh [] .(sh ∷ []) .((v0 , zero , []) ∷ [] Data.List.++ starSum sh [] ∷ []) vnz refl refl (InTail .v .(v0 , zero , []) .(starSum sh [] ∷ []) (InHead .v .(proj₁ sh , suc (proj₁ (proj₂ sh)) , proj₁ sh ∷ proj₂ (proj₂ sh)) .[] starComb)) | inj₁ lComb = v , v0 , v0identRight , InHead v sh [] lComb , InHead v0 (v0 , zero , []) _ (v0 , refl) , vnz
+starDecomp v sh [] .(sh ∷ []) .((v0 , zero , []) ∷ [] Data.List.++ starSum sh [] ∷ []) vnz refl refl (InTail .v .(v0 , zero , []) .(starSum sh [] ∷ []) (InHead .v .(proj₁ sh , suc (proj₁ (proj₂ sh)) , proj₁ sh ∷ proj₂ (proj₂ sh)) .[] starComb)) | inj₂ (v1 , v2 , sumPf , comb1 , comb2 , zpf ) = v1 , v2 , sumPf , InHead v1 sh [] comb1 ,  InTail v2 (v0 , zero , []) _ (InHead v2 _ [] comb2) , zpf
+starDecomp v sh [] .(sh ∷ []) .((v0 , 0 , []) ∷ (proj₁ sh , suc (proj₁ (proj₂ sh)) , proj₁ sh ∷ proj₂ (proj₂ sh)) ∷ []) vnz refl refl (InTail .v .(v0 , 0 , []) .((proj₁ sh , suc (proj₁ (proj₂ sh)) , proj₁ sh ∷ proj₂ (proj₂ sh)) ∷ []) (InTail .v .(proj₁ sh , suc (proj₁ (proj₂ sh)) , proj₁ sh ∷ proj₂ (proj₂ sh)) .[] ()))
+starDecomp v sh (x ∷ st) .(sh ∷ x ∷ st) .((v0 , 0 , []) ∷ (proj₁ x +v proj₁ (starSum sh st) , suc (proj₁ (proj₂ x) + proj₁ (proj₂ (starSum sh st))) , proj₁ x ∷ proj₂ (proj₂ x) Data.Vec.++ proj₂ (proj₂ (starSum sh st))) ∷ []) vnz refl refl (InTail .v .(v0 , 0 , []) .((proj₁ x +v proj₁ (starSum sh st) , suc (proj₁ (proj₂ x) + proj₁ (proj₂ (starSum sh st))) , proj₁ x ∷ proj₂ (proj₂ x) Data.Vec.++ proj₂ (proj₂ (starSum sh st))) ∷ []) inSemi) = {!!} -}
+
 
 testPf : {n : ℕ} (sh : LinSet n) (su : SemiLinSet n) (sv : SemiLinSet n) -> (sh ∷ su ) +s sv ≡ (Data.List.map (λ x → sh +l x) sv ) Data.List.++ (su +s sv)
 testPf sh su sv = refl
@@ -126,7 +155,7 @@ reSemiLin cmap RETypes.∅ = []
 reSemiLin cmap (RETypes.Lit x) = Data.List.[ basis (cmap x ) , 0 , [] ]
 reSemiLin cmap (r1 RETypes.+ r2) = reSemiLin cmap r1 Data.List.++ reSemiLin cmap r2
 reSemiLin cmap (r1 RETypes.· r2) = reSemiLin cmap r1 +s reSemiLin cmap r2
-reSemiLin cmap (r RETypes.*) = Data.List.[ concatLinSets ( reSemiLin cmap r)  ]
+reSemiLin cmap (r RETypes.*)  = starSemiLin (reSemiLin cmap r)
 
 
 {-
@@ -176,17 +205,21 @@ rightCons : {A : Set} -> (l : List A) -> (l Data.List.++ [] ≡ l)
 rightCons [] = refl
 rightCons (x ∷ l) rewrite rightCons l = refl
 
+{-
 rSubsetStar : (r : RETypes.RE RETypes.NonNull) -> (s : List Char) -> RETypes.REMatch s r -> RETypes.REMatch s (r RETypes.*)
 rSubsetStar RETypes.∅ [] ()
 rSubsetStar (RETypes.Lit x) [] ()
 rSubsetStar (r RETypes.+ r₁) [] (RETypes.LeftPlusMatch .r₁ match) = RETypes.EmptyStarMatch
 rSubsetStar (r RETypes.+ r₁) [] (RETypes.RightPlusMatch .r match) = RETypes.EmptyStarMatch
-rSubsetStar (r RETypes.· r₁) [] match = RETypes.EmptyStarMatch 
+rSubsetStar (r RETypes.· r₁) [] match = []
 rSubsetStar r (x ∷ s) match = RETypes.StarMatch match RETypes.EmptyStarMatch --RETypes.StarMatch {!!} RETypes.EmptyStarMatch 
+-}
 
-unpackStarSemi : {n : ℕ} -> {r : RETypes.RE RETypes.NonNull} -> (cmap : Char -> Fin.Fin n) -> (v : Parikh n) -> InSemiLin v (reSemiLin cmap (r RETypes.*)) -> LinComb v (concatLinSets (reSemiLin cmap r) )
+{-
+unpackStarSemi : {n : ℕ} -> {r : RETypes.RE RETypes.NonNull} -> (cmap : Char -> Fin.Fin n) -> (v : Parikh n) -> InSemiLin v (reSemiLin cmap (r RETypes.*)) -> LinComb v (starSemiLin (reSemiLin cmap r) )
 unpackStarSemi cmap v (InHead .v ._ .[] lcomb) = lcomb
 unpackStarSemi cmap v (InTail .v ._ .[] ()) 
+-}
 
 reParikhCorrect : 
   {n : ℕ} 
@@ -234,51 +267,10 @@ reParikhCorrect cmap (r1 RETypes.· r2) s3 (RETypes.ConcatMatch {s1 = s1} {s2 = 
     wordParikhIsPlus = sym (wordParikhPlus cmap s1 s2)
 
   in sumPreserved (wordParikh cmap s1) (wordParikh cmap s2) leftParikh rightParikh leftInSemi rightInSemi
-reParikhCorrect cmap (r RETypes.*) [] RETypes.EmptyStarMatch .v0 refl .(concatLinSets (reSemiLin cmap r) ∷ []) refl with (reSemiLin cmap r) 
-reParikhCorrect cmap (r RETypes.*) [] RETypes.EmptyStarMatch .v0 refl .(concatLinSets (reSemiLin cmap r) ∷ []) refl | []  = InHead v0 (concatLinSets []) [] (v0 , refl) 
-reParikhCorrect cmap (r RETypes.*) [] RETypes.EmptyStarMatch .v0 refl .(concatLinSets ((xb , xm , xv ) ∷ rsl) ∷ []) refl | (xb , xm , xv ) ∷ rsl =
- InHead v0 (concatLinSets ((xb , xm , xv) ∷ rsl)) [] (v0 , 
-    (begin 
-      (0 ·ₛ xb) +v
-        applyLinComb v0 (xm + proj₁ (proj₂ (concatLinSets rsl)))
-        (xv Data.Vec.++ proj₂ (proj₂ (concatLinSets rsl))) v0 
-    ≡⟨ cong (λ x → (0 ·ₛ xb) +v x) (v0apply v0 (xv Data.Vec.++ proj₂ (proj₂ (concatLinSets rsl)))) ⟩ 
-    (0 ·ₛ xb) +v v0 
-    ≡⟨ cong (λ x → x +v v0) (scalar0ident xb) ⟩ 
-    v0 +v v0 
-    ≡⟨ v0identLeft ⟩ 
-    (v0 ∎)))
-reParikhCorrect cmap (r RETypes.*) .(c1 ∷ s1t Data.List.++ s2) (RETypes.StarMatch {c1} {s1t} {s2} {.((c1 ∷ s1t) Data.List.++ s2)} {refl} {.r} match match₁) .(wordParikh cmap ((c1 ∷ s1t) Data.List.++ s2)) refl .(concatLinSets (reSemiLin cmap r) ∷ []) refl rewrite wordParikhPlus cmap (c1 ∷ s1t) s2  = 
-  InHead ((basis (cmap c1) +v wordParikh cmap s1t) +v wordParikh cmap s2) (concatLinSets (reSemiLin cmap r)) [] 
-  (sumEqualVecs (concatLinSets (reSemiLin cmap r)) (concatZeroBase (reSemiLin cmap r)) (basis (cmap c1) +v wordParikh cmap s1t) (wordParikh cmap s2) 
-    (unpackStarSemi cmap (basis (cmap c1) +v wordParikh cmap s1t) 
-      (reParikhCorrect cmap (r RETypes.*) (c1 ∷ s1t) (rSubsetStar r (c1 ∷ s1t) match) (basis (cmap c1) +v wordParikh cmap s1t) refl (concatLinSets (reSemiLin cmap r) ∷ []) refl)) 
-    (unpackStarSemi cmap (wordParikh cmap s2) 
-      (reParikhCorrect cmap (r RETypes.*) s2 match₁ (wordParikh cmap s2) refl (concatLinSets (reSemiLin cmap r) ∷ []) refl)))
+reParikhCorrect cmap (r RETypes.*) [] RETypes.EmptyStarMatch .v0 refl .(starSemiLin (reSemiLin cmap r)) refl = zeroInStar (reSemiLin cmap r) (starSemiLin (reSemiLin cmap r)) refl
+reParikhCorrect cmap (r RETypes.*) .(s1 Data.List.++ s2 ) (RETypes.StarMatch {s1 = s1} {s2 = s2} {spf = refl} m1 m2) ._ refl .(starSemiLin (reSemiLin cmap r)) refl rewrite wordParikhPlus cmap s1 s2 = 
+  starExtend (wordParikh cmap s1) (wordParikh cmap s2) (reSemiLin cmap r) _ refl (reParikhCorrect cmap r s1 m1 (wordParikh cmap s1) refl (reSemiLin cmap r) refl) (reParikhCorrect cmap (r RETypes.*) s2 m2 (wordParikh cmap s2) refl (starSemiLin (reSemiLin cmap r)) refl) 
 
-{-
-  let
-    firstStarMatch : RETypes.REMatch (c1 ∷ s1t) (r RETypes.*)
-    firstStarMatch = rSubsetStar r (c1 ∷ s1t) match
-    --subPar = reSemiLin cmap r
-    firstMatchPar = wordParikh cmap (c1 ∷ s1t)
-    inSubPar : InSemiLin firstMatchPar (concatLinSets (reSemiLin cmap r) ∷ [])
-    inSubPar = reParikhCorrect cmap (r RETypes.*) (c1 ∷ s1t) firstStarMatch firstMatchPar refl (concatLinSets (reSemiLin cmap r) ∷ []) refl
-
-    secondMatchPar = wordParikh cmap s2
-    inSubPar2 : InSemiLin secondMatchPar (concatLinSets (reSemiLin cmap r) ∷ [])
-    inSubPar2 = reParikhCorrect cmap (r RETypes.*) s2 match₁ secondMatchPar refl (concatLinSets (reSemiLin cmap r) ∷ []) refl
-
-    --subPar and langParikh should be paralell, 
-    --each lin set in langParikh is just a constant multiplied by
-    --the corresponding one in subPar
-    --This function iterates to find the corresponding pair
-
-    --Idea: show that s1's parikh is in langParikh. Then, we know s2's parikh is in langParikh, so we show their sum is in langParikh
-    --newSemiMatch : InSemiLin firstMatchPar langParikh
-    --newSemiMatch = {!!} --findConstMultMatch firstMatchPar subPar langParikh lpf inSubPar
-    
-  in {!!} -}
 
 decomposeLin
   :  {n : ℕ} 
@@ -361,6 +353,7 @@ test : InSemiLin v
 
 --Useful function for splitting semi-linear sets
 --Used for union below
+
 inSemiConcat : 
   {n : ℕ} 
   -> (v : Parikh n) 
@@ -386,6 +379,8 @@ inSemiConcat v (x ∷ sl1) sl2 .(sh ∷ st) spf (InTail .v sh st inSemi) with in
 ... | inj₁ inSl1 = inj₁ (InTail v x sl1 inSl1)
 ... | inj₂ inSl2 = inj₂ inSl2
 
+
+{-# TERMINATING #-}
 reParikhComplete : {n : ℕ} -> {null? : RETypes.Null?}
   -> (cmap : Char -> Fin.Fin n)
 --  -> (imap : Fin.Fin n -> Char)
@@ -422,52 +417,17 @@ reParikhComplete cmap (r1 RETypes.· r2) v ._ refl inSemi with decomposeSum v (r
                                                                                                                                                                                                                                                                                                                                                                                                                                     (reSemiLin cmap r1 +s reSemiLin cmap r2) refl inSemi))) (reSemiLin cmap r2) refl (proj₂ (proj₂ (proj₂ (proj₂ (decomposeSum v (reSemiLin cmap r1) (reSemiLin cmap r2)
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     (reSemiLin cmap r1 +s reSemiLin cmap r2) refl inSemi))))) 
 reParikhComplete cmap (r1 RETypes.· r2) .(wordParikh cmap w1 +v wordParikh cmap w2) .(Data.List.foldr Data.List._++_ [] (Data.List.map _ (reSemiLin cmap r1))) refl inSemi | .(wordParikh cmap w1) , .(wordParikh cmap w2) , refl , inSemi1 , inSemi2 | w1 , refl , match1 | w2 , refl , match2 = (w1 Data.List.++ w2) , ((sym (wordParikhPlus cmap w1 w2)) , (RETypes.ConcatMatch match1 match2))
-{-  let 
-    subLeft = reParikhComplete cmap r1 v1 (reSemiLin cmap r1) refl inSemi1
-    (w1 , pf1 , match1 ) = subLeft 
-    subRight = reParikhComplete cmap r2 v2 (reSemiLin cmap r2) refl inSemi2
-    (w2 , pf2 , match2 ) = subRight
-    wpPlus = sym (wordParikhPlus cmap w1 w2)
-  in w1 Data.List.++ w2 , (sym {!!} , RETypes.ConcatMatch match1 match2) -}
-{- 
+
+reParikhComplete cmap (r RETypes.*) v langParikh lpf inSemi with (reSemiLin cmap r )
+reParikhComplete cmap (r RETypes.*) v .((v0 , 0 , []) ∷ []) refl (InHead .v .(v0 , 0 , []) .[] x) | [] = [] , ((sym (proj₂ x)) , RETypes.EmptyStarMatch)
+reParikhComplete cmap (r RETypes.*) v .((v0 , 0 , []) ∷ []) refl (InTail .v .(v0 , 0 , []) .[] ()) | []
+reParikhComplete cmap (r RETypes.*) v .((v0 , 0 , []) ∷ starSum x rsl ∷ []) refl inSemi | x ∷ rsl = 
   let
-    
-    subSemi1 = reSemiLin cmap r1
-    subSemi2 = reSemiLin cmap r2
-    langParikh = subSemi1 +s subSemi2
+    splitVec = starDecomp v (reSemiLin cmap r) _ {!!} refl {!!}
+    v1 , v2 , vpf , inS , inSS , _ = splitVec
+    subCall1 = reParikhComplete cmap r v1 _ refl inS
+    w1 , wpf1 , match  = subCall1
+    subCall2 = reParikhComplete cmap (r RETypes.*) v2 _ refl inSS
+    w2 , wpf2 , match2 = subCall2
+  in (w1 Data.List.++ w2) , (trans (sym vpf) (sym (wordParikhPlus cmap w1 w2)) , RETypes.StarMatch match match2)
 
-    --subInSemis : InSemiLin v subSemi1 × InSemiLin v subSemi2
-    deomp = decomposeSum v subSemi1 subSemi2 langParikh refl inSemi --TODO do the math for this case
-    (refl , inLeftSemi , inRightSemi) = subInSemiPair
-    (leftW , leftPf , leftMatch) = reParikhComplete cmap  r1 v subSemi1 refl {!!}
-    (rightW , rightPf , rightMatch) = reParikhComplete cmap  r2 v subSemi2 refl {!!}
-    wordConcat : (wordParikh cmap leftW) +v (wordParikh cmap rightW) ≡ wordParikh cmap (leftW Data.List.++ rightW)
-    wordConcat = sym (wordParikhPlus cmap leftW rightW)
-  in leftW Data.List.++ rightW ,
-     {!!} , {!!} --(trans {!!} {!!} , (RETypes.ConcatMatch leftMatch rightMatch))
--}
-
-reParikhComplete cmap (r RETypes.*) v .(concatLinSets (reSemiLin cmap r) ∷ []) refl (InHead .v .(concatLinSets (reSemiLin cmap r)) .[] (combVecs , combPf)) 
-  with v0 VecNatEq.≟ v
-reParikhComplete cmap (r RETypes.*) .[] .(concatLinSets (reSemiLin cmap r) ∷ []) refl (InHead .[] .(concatLinSets (reSemiLin cmap r)) .[] (combVecs , combPf)) | yes Equality.[]-cong = 
-  [] , (refl , RETypes.EmptyStarMatch)
-reParikhComplete cmap (r RETypes.*) .(applyLinComb (proj₁ (concatLinSets (reSemiLin cmap r))) (proj₁ (proj₂ (concatLinSets (reSemiLin cmap r)))) (proj₂ (proj₂ (concatLinSets (reSemiLin cmap r)))) combVecs) .(concatLinSets (reSemiLin cmap r) ∷ []) refl (InHead .(applyLinComb (proj₁ (concatLinSets (reSemiLin cmap r))) (proj₁ (proj₂ (concatLinSets (reSemiLin cmap r)))) (proj₂ (proj₂ (concatLinSets (reSemiLin cmap r)))) combVecs) .(concatLinSets (reSemiLin cmap r)) .[] (combVecs , refl)) | no ¬p rewrite concatZeroBase (reSemiLin cmap r) =
-  let
-    v = (applyLinComb (proj₁ (concatLinSets (reSemiLin cmap r))) (proj₁ (proj₂ (concatLinSets (reSemiLin cmap r)))) (proj₂ (proj₂ (concatLinSets (reSemiLin cmap r)))) combVecs)
-    langParikh = (concatLinSets (reSemiLin cmap r)) ∷ []
-    ourSplit : ∃ λ witnessWord -> ∃ λ v2 -> (RETypes.REMatch witnessWord r × InSemiLin v2 langParikh × wordParikh cmap witnessWord +v v2 ≡ v ) 
-    ourSplit = {!!}
-    witnessWord , v2 , witnessMatch , subInSemi , vpf  = ourSplit
-    subCall = reParikhComplete cmap (r RETypes.*) v2 langParikh refl subInSemi
-    subWord , subPf , subMatch = subCall
-  in (witnessWord Data.List.++ subWord) , sym {!!} , (RETypes.StarMatch witnessMatch subMatch)
-reParikhComplete cmap (r RETypes.*) v .(concatLinSets (reSemiLin cmap r) ∷ []) refl (InTail .v .(concatLinSets (reSemiLin cmap r)) .[] ())
-
---Create module
---Instantiate module, with setoid argument
---Rewrite, under the hood, pattern matches that proof is refl
---Won't always work in functions inside the proofs, get unification problems with functions
-
---If use fns, do a with which has 3 variables
---LHS, RHS, and pf that LHS == RHS, pattern match on proof, see that it's refl
---Unifies left and right
