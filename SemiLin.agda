@@ -37,13 +37,6 @@ open import Data.Sum
 
 import Data.Nat.Properties.Simple
 
-{-
-_≡⟨_⟩_ : ∀ {A : Set} (x : A) {y z : A} → x ≡ y → y ≡ z → x ≡ z
-x ≡⟨ refl ⟩ refl = refl
-
-_∎ : ∀ {A : Set} (x : A) → x ≡ x
-x ∎ = refl
--}
 
 
 --The Parikh vector for a word is the count of occurrences of
@@ -68,6 +61,7 @@ v0 : {n : ℕ} -> Parikh n
 v0 {zero} = []
 v0 {suc n} = 0 ∷ v0
 
+--0 times anything is v0
 scalar0ident : {n : ℕ} -> (v : Parikh n ) -> 0 ·ₛ v ≡ v0
 scalar0ident [] = refl
 scalar0ident (x ∷ v) = cong (_∷_ zero) (scalar0ident v)  
@@ -96,7 +90,6 @@ v0identRight {v = v} =
   ≡⟨ v0identLeft ⟩ 
     v ∎ 
 
---
 
 --Prove that vector addition is associative
 --I couldn't figure out how to get this one working with rewrite
@@ -129,44 +122,22 @@ vAssoc2 {x = x ∷ xs} {y ∷ ys} {z ∷ zs} rewrite +-assoc x y z | vAssoc {x =
   = refl
 
 
+
+--Prove that scalar multiplication distributes over vector addition
 scalarAssoc : {n : ℕ} -> (x y : ℕ ) -> (v : Parikh n) -> (x + y) ·ₛ v ≡  (x ·ₛ v) +v (y ·ₛ v)
 scalarAssoc x y [] = refl
 scalarAssoc x y (vfirst ∷ v) rewrite scalarAssoc x y v | distribʳ-*-+ vfirst x y = refl
 
 
+--Handy lemma, prove that 0 + anything is 0
 ident0 : (x : ℕ) -> x + 0 ≡ x
 ident0 zero = refl
 ident0 (suc x) = cong suc (ident0 x)
 
+--Show that 1 is an identity for scalar multiplication
 scalarIdent : {n : ℕ} -> (v : Parikh n) -> (1 ·ₛ v ≡ v )
 scalarIdent [] = refl
 scalarIdent (x ∷ v) rewrite scalarIdent v | ident0 x = refl
-
---(λ y₁ → xh + yh + zh ∷ (xt +v yt) +v zt ≡ y₁ ∷ xt +v (yt +v zt))
-{-
-    headSum = (xh + yh) + zh
-    tailSum = (xt +v yt) +v zt
-    tailRec : (xt +v yt) +v zt ≡ xt +v (yt +v zt)
-    tailRec = vAssoc
-    topDivide : (x +v y) +v z ≡ ( ((xh + yh ) + zh ) ∷ ((xt +v yt) +v zt))
-    topDivide = refl
-    normalAddAssoc : (xh + yh) + zh ≡ xh + (yh + zh)
-    normalAddAssoc = Data.Nat.Properties.Simple.+-assoc xh yh zh
-    tailAssoc : ((xt +v yt) +v zt) ≡ (xt +v (yt +v zt))
-    tailAssoc = vAssoc {n} {xt} {yt} {zt}
-    subAnswer1 : ((xh + yh) + zh) ∷ ((xt +v yt) +v zt) ≡ ((xh + yh) + zh) ∷ (xt +v (yt +v zt))
-    subAnswer1 = cong (\y -> ((xh + yh) + zh) ∷ y) tailAssoc
-    suAbaganswer2 : ((xh + yh) + zh) ∷ ((xt +v yt) +v zt) ≡ (xh + (yh + zh)) ∷ (xt +v (yt +v zt))
-    subAnswer2 = subst (λ y -> ((xh + yh) + zh) ∷ ((xt +v yt) +v zt) ≡ y ∷ (xt +v (yt +v zt)) ) normalAddAssoc subAnswer1
-    subAnswer3 : (x +v y) +v z ≡ (xh + (yh + zh)) ∷ (xt +v (yt +v zt))
-    subAnswer3 = trans topDivide subAnswer2
-
-    rhsSplit : (xh + (yh + zh)) ∷ (xt +v (yt +v zt)) ≡ x +v (y +v z)
-    rhsSplit = refl 
-     
-  in trans subAnswer3 rhsSplit
--}
-
 
 --A linear set is defined by an offset vector b
 --And a set of m vectors v1 ... vm.
@@ -181,6 +152,8 @@ scalarIdent (x ∷ v) rewrite scalarIdent v | ident0 x = refl
 LinSet : ℕ -> Set
 LinSet n = (Parikh n) × (∃ λ (m : ℕ) → Vec (Parikh n) m )
 
+
+
 --Given an offset vector, a set of m Parikh vectors, and a set of m constants
 --Return b + c1·v1 + ... + cm·vm
 -- Wouter: you might want to consider defining this directly by recursion over the 
@@ -192,21 +165,36 @@ applyLinComb base .0 [] cs = base
 applyLinComb base (suc m) (firstVec ∷ vset) (firstConst ∷ cs) = (firstConst ·ₛ firstVec) +v (applyLinComb base m vset cs)
 
 
+--Show that, if all the coefficients in a linear combination are 0, that the resulting vector is the base (offset) vector
 v0apply : {n m : ℕ} -> (base : Parikh n) -> (vecs : Vec (Parikh n) m ) -> applyLinComb base m  vecs (v0 {m}) ≡ base 
 v0apply base [] = refl
 v0apply {n} {suc m} base (x ∷ vecs) rewrite scalar0ident x | v0apply base vecs = v0identLeft
 
 
 --A type acting as a witness that a vector is in a linear set
+--Is just a set of coefficients, and a proof that those coefficients
+--form v as a linear combination of vectors in our linear set's list
 LinComb : {n : ℕ} -> Parikh n -> LinSet n -> Set
 LinComb {n} initV (base , m , vset)  = 
   ∃ (λ (cs : Vec ℕ m) -> applyLinComb base m vset cs ≡ initV )
 
+
+--Sum of each vector in a linear set i.e. L1 + L2 = {x + y | x in L1, y in L2 }
+--We just add the bases, and concatenate the list of vectors which can be multiplied by constants
+_+l_ : {n : ℕ} -> LinSet n -> LinSet n -> LinSet n
+(base1 , m1 , vecs1 ) +l (base2 , m2 , vecs2 ) = (base1 +v base2 , m1 + m2 , vecs1 Data.Vec.++ vecs2 )
+
+
 --A semi-linear is a finite union of linear sets
 --We represent this using a list of linear sets
---TODO Vector?
 SemiLinSet : ℕ -> Set
 SemiLinSet n = List (LinSet n)
+
+--Sum each linear set in the two semi-linear sets
+--We basically just do a pairwise +l for each linear set in each of the semi-linear sets
+_+s_ : {n : ℕ} -> SemiLinSet n -> SemiLinSet n -> SemiLinSet n
+s1 +s s2 = Data.List.concat (Data.List.map (λ l1 -> Data.List.map (λ l2 -> l1 +l l2 )  s2 ) s1 )
+
 
 --Data type for a witness that an element is in a semiLinear set
 --Basically just a proof that there's some element (linear set) of the list containing the vector
@@ -224,46 +212,6 @@ data InSemiLin : {n : ℕ} -> (v : Parikh n) -> (sl : SemiLinSet n) -> Set where
     -> InSemiLin v st
     -> InSemiLin v (sh ∷ st)
 
---A proof that if a vector is in a SemiLinear set, then the vector is also in the 
---union of that SemiLinear set with another single linear set
-slExtend : {n : ℕ} -> (v : Parikh n) -> (sl : SemiLinSet n) -> InSemiLin v sl -> (ls : LinSet n) -> InSemiLin v (ls ∷ sl )
-slExtend v sl inTail ls = InTail v ls sl inTail
-
---the above proof, but extended to an arbitrary number of linear sets
-slConcatLeft : {n : ℕ} -> (v : Parikh n) -> (sl : SemiLinSet n) -> InSemiLin v sl -> (sl2 : SemiLinSet n) -> InSemiLin v (sl2 Data.List.++  sl )
-slConcatLeft v sl inTail [] = inTail
-slConcatLeft v sl inTail (x ∷ sl2) = InTail v x (sl2 Data.List.++ sl) (slConcatLeft v sl inTail sl2)
-
---The above proof, but the vectors are concatenated on the right
-slConcatRight : {n : ℕ} -> (v : Parikh n) -> (sl : SemiLinSet n) -> InSemiLin v sl -> (sl2 : SemiLinSet n) -> InSemiLin v (sl Data.List.++  sl2 )
-slConcatRight v .(sh ∷ st) (InHead .v sh st x) sl2 = (InHead v sh (st Data.List.++ sl2) x)
-slConcatRight v .(sh ∷ st) (InTail .v sh st inTail) sl2 = slExtend v (st Data.List.++ sl2) (slConcatRight v st inTail sl2) sh
-
-slCons :  {n : ℕ} -> (v : Parikh n) -> (sl : SemiLinSet n) -> (ls : LinSet n) -> (InSemiLin v (ls ∷ [] ) ) -> InSemiLin v (ls ∷ sl )
-slCons v sl sh (InHead .v .sh .[] x) = InHead v sh sl x
-slCons v sl sh (InTail .v .sh .[] ())
-
---Sum of each vector in a linear set i.e. L1 + L2 = {x + y | x in L1, y in L2 }
---We just add the bases, and concatenate the list of vectors which can be multiplied by constants
-_+l_ : {n : ℕ} -> LinSet n -> LinSet n -> LinSet n
-(base1 , m1 , vecs1 ) +l (base2 , m2 , vecs2 ) = (base1 +v base2 , m1 + m2 , vecs1 Data.Vec.++ vecs2 )
-
---Sum each linear set in the two semi-linear sets
---We basically just do a pairwise +l for each linear set in each of the semi-linear sets
-_+s_ : {n : ℕ} -> SemiLinSet n -> SemiLinSet n -> SemiLinSet n
-s1 +s s2 = Data.List.concat (Data.List.map (λ l1 -> Data.List.map (λ l2 -> l1 +l l2 )  s2 ) s1 )
-
-
-l0 : {n : ℕ} -> LinSet n
-l0 = (v0 , zero , [] )
-
-s0 : {n : ℕ} -> SemiLinSet n
-s0 = (v0 , zero , [] ) ∷ []
-
-
-s0match : {n : ℕ} -> (v : Parikh n) -> InSemiLin v s0 -> v ≡ v0
-s0match .v0 (InHead .v0 .(v0 , 0 , []) .[] (comb , refl)) = refl
-s0match v (InTail .v .(v0 , 0 , []) .[] ())
 
 
 --Creates a  vector
@@ -273,41 +221,100 @@ basis Fin.zero  = Data.Vec.[ suc zero ] Data.Vec.++ v0
 basis (Fin.suc f) = 0 ∷ basis f 
 
 
+--A proof that if a vector is in a SemiLinear set, then the vector is also in the 
+--union of that SemiLinear set with another single linear set
+slExtend : {n : ℕ} -> (v : Parikh n) -> (sl : SemiLinSet n) -> InSemiLin v sl -> (ls : LinSet n) -> InSemiLin v (ls ∷ sl )
+slExtend v sl inTail ls = InTail v ls sl inTail
+
+
+--the above proof, but extended to an arbitrary number of linear sets
+slConcatLeft : {n : ℕ} -> (v : Parikh n) -> (sl : SemiLinSet n) -> InSemiLin v sl -> (sl2 : SemiLinSet n) -> InSemiLin v (sl2 Data.List.++  sl )
+slConcatLeft v sl inTail [] = inTail
+slConcatLeft v sl inTail (x ∷ sl2) = InTail v x (sl2 Data.List.++ sl) (slConcatLeft v sl inTail sl2)
+
+
+--The above proof, but the vectors are concatenated on the right
+slConcatRight : {n : ℕ} -> (v : Parikh n) -> (sl : SemiLinSet n) -> InSemiLin v sl -> (sl2 : SemiLinSet n) -> InSemiLin v (sl Data.List.++  sl2 )
+slConcatRight v .(sh ∷ st) (InHead .v sh st x) sl2 = (InHead v sh (st Data.List.++ sl2) x)
+slConcatRight v .(sh ∷ st) (InTail .v sh st inTail) sl2 = slExtend v (st Data.List.++ sl2) (slConcatRight v st inTail sl2) sh
+
+
+--Show that, if a vector is in a linear-set, then it is in a semi-linear set containing that linear set
+slCons :  {n : ℕ} -> (v : Parikh n) -> (sl : SemiLinSet n) -> (ls : LinSet n) -> (InSemiLin v (ls ∷ [] ) ) -> InSemiLin v (ls ∷ sl )
+slCons v sl sh (InHead .v .sh .[] x) = InHead v sh sl x
+slCons v sl sh (InTail .v .sh .[] ())
+
+
+
+
+--A linear set containing only v0
+l0 : {n : ℕ} -> LinSet n
+l0 = (v0 , zero , [] )
+
+--A semi-linear set containing only v0
+s0 : {n : ℕ} -> SemiLinSet n
+s0 = (v0 , zero , [] ) ∷ []
+
+
+--Show that, if a vector is in s0, then it must be v0
+s0match : {n : ℕ} -> (v : Parikh n) -> InSemiLin v s0 -> v ≡ v0
+s0match .v0 (InHead .v0 .(v0 , 0 , []) .[] (comb , refl)) = refl
+s0match v (InTail .v .(v0 , 0 , []) .[] ())
+
+
+
+
 --Show that if a vector is in a semi-lin set, then it's not the empty list
 inSemiNonEmtpy : {n : ℕ} -> (v : Parikh n) -> (s : SemiLinSet n) -> InSemiLin v s -> ∃ λ sh -> ∃ λ st -> s ≡ sh ∷ st
 inSemiNonEmtpy v .(sh ∷ st) (InHead .v sh st x) = sh , st , refl
 inSemiNonEmtpy v .(sh ∷ st) (InTail .v sh st inSemi) = sh , st , refl
 
+
+-------------Functions for Star ------------------
+-- Star is by far the most complicated case, so a large number of definitions and lemmas
+--Are dedicated to it
+
+--Given a linear set L, find another linear set
+--such that L = L +l (L*)
+--We do this by allowing the base to appear an arbitrary number of times
 linStar : {n : ℕ} -> LinSet n -> LinSet n
 linStar (base , m , vecs ) = (base , suc m , base ∷ vecs )
 
+--Given a non-empty semi-linear set, find the sum of the star
+--of all linear sets it contains
 starSum : {n : ℕ} -> LinSet n -> SemiLinSet n -> LinSet n
 starSum ls [] = linStar ls
 starSum first (sh ∷ s) = (linStar sh) +l starSum first s
 
-
+--The semi-linear set for the Star of a regular expression
+--The semi-linear set always contains 0, since the empty string matches r*
+--We then union s0 with the sum of the star of each linear set
+--in the Parikh image of r 
 starSemiLin : {n : ℕ} -> SemiLinSet n -> SemiLinSet n
 starSemiLin [] = s0
 starSemiLin (first ∷ s) = s0 Data.List.++ (  starSum first s ∷ [])
 
 
-starSumOneEmpty : {n : ℕ} -> (l : LinSet n) -> (ls : LinSet n) -> ls ≡ starSum l [] -> (proj₁ (proj₂ ls) ≡ suc (proj₁ (proj₂ l) ) )
-starSumOneEmpty l .(proj₁ l , suc (proj₁ (proj₂ l)) , proj₁ l ∷ proj₂ (proj₂ l)) refl = refl
-
-
+--Show that v0 is always in a star semi-linear set
 zeroInStar : {n : ℕ} -> (s ss : SemiLinSet n) -> ss ≡ (starSemiLin s)  -> InSemiLin v0 ss
 zeroInStar [] .((v0 , 0 , []) ∷ []) refl = InHead v0 (v0 , zero , []) [] ([] , refl)
 zeroInStar (x ∷ s) .((v0 , 0 , []) ∷ starSum x s ∷ []) refl = InHead v0 (v0 , zero , []) (starSum x s ∷ []) ([] , refl)
 
 
+--Show that if we sum two linear sets, then the number of vectors that can be combined
+--is the sum of the number in each input set
 linSetLen : {n : ℕ} -> (l1 l2 l3 : LinSet n) -> l1 +l l2 ≡ l3 -> (proj₁ (proj₂ l3)) ≡ (proj₁ (proj₂ l1)) + (proj₁ (proj₂ l2))
 linSetLen (proj₁ , m1 , proj₂) (proj₃ , m2 , proj₄) .(proj₁ +v proj₃ , m1 + m2 , proj₂ Data.Vec.++ proj₄) refl = refl
 
+
+--Useful lemma, suc x = x + 1
 plusOneDef : ( x : ℕ) -> (suc x ≡ x + 1)
 plusOneDef zero = refl
 plusOneDef (suc x) = cong suc (plusOneDef x)
 
 
+--Show that we can "remove" part of the base vector
+--When making a linear combination
 baseSplit : {n : ℕ} (ub vb : Parikh n) (vm : ℕ) (vvecs : Vec (Parikh n) vm) (vconsts : Vec ℕ vm) -> 
   applyLinComb (ub +v vb) vm vvecs vconsts
   ≡ ub +v applyLinComb vb vm vvecs vconsts
@@ -327,6 +334,10 @@ baseSplit ub vb (suc m) (x ∷ vvecs) (c ∷ vconsts)  =
   (ub +v ((c ·ₛ x) +v applyLinComb vb m vvecs vconsts) ∎)
 
 
+--If we have two linear combinations of vectors,
+--That we can make it into a single combination of vectors
+--By adding the bases, and concatenating the vector lists, and
+-- concatenating the coefficient lists
 combSplit :
   {n : ℕ} (ub vb : Parikh n) (um vm : ℕ) (uvecs : Vec (Parikh n) um) (vvecs : Vec (Parikh n) vm) (uconsts : Vec ℕ um) (vconsts : Vec ℕ vm) -> 
   (applyLinComb (ub +v vb) (um + vm) (uvecs Data.Vec.++ vvecs) (uconsts Data.Vec.++ vconsts)
@@ -351,7 +362,8 @@ combSplit ub vb (suc um) vm (x ∷ uvecs) vvecs (uc ∷ uconsts) vconsts =
      applyLinComb vb vm vvecs vconsts ∎)
 
 
-
+--Extend the idea of distributivity to linear combinations
+--Basically, the c1*v +v c2*v = (c1 +v c2 )*v, where * is element-wise product
 applyCombSum : 
   {n m : ℕ} -> 
   (vecs : Vec (Parikh n) m ) ->
@@ -386,12 +398,16 @@ applyCombSum {n} {suc m} (firstVec ∷ vecs) (uc ∷ uconsts) (vc ∷ vconsts) r
   ≡⟨ cong (λ x → ((uc ·ₛ firstVec) +v applyLinComb v0 m vecs uconsts) +v x) (v+-commut (applyLinComb v0 m vecs vconsts) (vc ·ₛ firstVec)) ⟩ 
   ((uc ·ₛ firstVec) +v applyLinComb v0 m vecs uconsts) +v
     ((vc ·ₛ firstVec) +v applyLinComb v0 m vecs vconsts) ∎
--- ? ≡⟨ ? ⟩ ?
+
+
+
 --If a linear set has base 0, and u and v are both in that set, then u+v is as well
 sumEqualVecs : {n : ℕ} -> (ls : LinSet n) -> (proj₁ ls ≡ v0) -> (u v : Parikh n) -> LinComb u ls -> LinComb v ls -> LinComb (u +v v) ls
 sumEqualVecs (.v0 , m , vecs) refl .(applyLinComb v0 m vecs uconsts) .(applyLinComb v0 m vecs vconsts) (uconsts , refl) (vconsts , refl)  = 
   (uconsts +v vconsts) , applyCombSum vecs uconsts vconsts --applyCombSum {!!} {!!} vecs uconsts vconsts
 
+
+--Show that the base vector of a linear set is always in that set, just set coefficients to 0
 linContainsBase : {n : ℕ} -> (base : Parikh n) -> (m : ℕ ) -> (vecs : Vec (Parikh n) m ) -> applyLinComb base m vecs v0 ≡ base
 linContainsBase base .0 [] = refl
 linContainsBase base (suc m) (x ∷ vecs) rewrite linContainsBase base m vecs  = 
@@ -403,6 +419,9 @@ linContainsBase base (suc m) (x ∷ vecs) rewrite linContainsBase base m vecs  =
   (base ∎)
 
 
+--Show that applying a linear combination with the base is just
+--The base, plus the linear combination with v0 base
+--Just a useful lemma for other proofs, basically uses associativity
 linCombRemoveBase 
  :  {n : ℕ}
  -> (m : ℕ )
@@ -418,9 +437,13 @@ linCombRemoveBase {n} m base vecs c =
   ≡⟨ baseSplit base v0 m vecs c ⟩
   base +v applyLinComb v0 m vecs c ∎
 
+--Show that only v0 is in a set with no vectors and v0 base
 emptyCombZero : {n : ℕ} -> (v : Parikh n ) -> LinComb v (v0 , 0 , []) -> v ≡ v0
 emptyCombZero .v0 ([] , refl) = refl
 
+
+--Show that when we add two linear combinations of the same vectors together,
+--We get a linear combination of those vectors, with an extra base left-over
 linCombDecompBase 
  :  {n : ℕ}
  -> (m : ℕ )
@@ -511,15 +534,10 @@ linCombDecompBase (suc m) base (vec1 ∷ vecs) (c ∷ c1) (cc ∷ c2) rewrite li
   base +v (((c + cc) ·ₛ vec1) +v applyLinComb base m vecs (c1 +v c2)) 
   ≡⟨ cong (λ x → base +v x) refl ⟩ 
   (base +v (((c + cc) ·ₛ vec1) +v applyLinComb base m vecs (c1 +v c2)) ∎)
-{-  begin 
-  ((c ·ₛ vec1) +v (base +v applyLinComb v0 m vecs c1)) +v
-    ((cc ·ₛ vec1) +v (base +v applyLinComb v0 m vecs c2)) 
-  ≡⟨ cong (λ x → x +v ((cc ·ₛ vec1) +v (base +v applyLinComb v0 m vecs c2))) (sym vAssoc) ⟩ 
-  (((c ·ₛ vec1) +v base) +v applyLinComb v0 m vecs c1) +v
-    ((cc ·ₛ vec1) +v (base +v applyLinComb v0 m vecs c2)) 
-  ≡⟨ {!!} ⟩ {!!} -}
--- ? ≡⟨ ? ⟩ ?
 
+
+--Show that, if v1 is in L, and v2 is in L*, then v1 +v v2 is in L*
+--Can be used to show that the sum of any vectors from L will be in L*
 linStarExtend 
   : {n : ℕ} -> (v1 v2 : Parikh n ) ->
   (l1 ls : LinSet n ) -> ls ≡ linStar l1  -> LinComb v1 l1 -> LinComb v2 ls -> LinComb (v1 +v v2) ls
@@ -555,8 +573,9 @@ linStarExtend .(applyLinComb base m vecs c1) .((c2h ·ₛ base) +v applyLinComb 
   )
 
 
---InHead (v1 +v v2) (linStar (tbase , tm , tvecs) +l starSum (hbase , hm , hvecs) st) [] {!!}
-
+--Show that every non-empty vector in L* for a linear-set L
+--Can be split into a vector from L and another in L*
+--Basically proves that L* contains only sums of vectors in L
 linStarDecomp
  :  {n : ℕ}
  -> (v : Parikh n)
@@ -586,51 +605,7 @@ linStarDecomp .((suc cbase ·ₛ base) +v applyLinComb base m vecs c) (base , m 
 
 
 
-{-
---TODO make sure this is right
---This is supposed to be used for *, but I'm not sure it's right
-concatLinSets : {n : ℕ } -> SemiLinSet n -> LinSet n
-concatLinSets [] = (v0 , 0 , [])
-concatLinSets {n} ((base , m ,  linVecs ) ∷ otherLins) = 
-  let
-    newVecs : Vec (Parikh n) (suc m)
-    newVecs = (base ∷ linVecs)
-    (_ , m2 , subVecs) = concatLinSets otherLins
-  in v0 , ((suc (m) + m2) , newVecs Data.Vec.++ subVecs)
 
-
-concatZeroBase : {n : ℕ } -> (sl : SemiLinSet n) -> proj₁ (concatLinSets sl ) ≡ v0
-concatZeroBase [] = refl
-concatZeroBase (x ∷ sl) = refl
--}
-
-
-
---Find the Parikh vector of a given word
---Here cmap is the mapping of each character to its position
---in the Parikh vector
-wordParikh : {n : ℕ} -> (Char -> Fin.Fin n) -> (w : List Char) -> Parikh n
-wordParikh cmap [] = v0
-wordParikh cmap (x ∷ w) = (basis (cmap x)) +v (wordParikh cmap w)
-
---Show that the Parikh of concatenating two words
---Is the sum of their Parikhs
-wordParikhPlus : {n : ℕ} 
-  -> (cmap : Char -> Fin.Fin n) 
-  -> (u : List Char) 
-  -> (v : List Char)
-  -> wordParikh cmap (u Data.List.++ v) ≡ (wordParikh cmap u) +v (wordParikh cmap v)
-wordParikhPlus cmap [] v = sym v0identLeft
-wordParikhPlus {n} cmap (x ∷ u) v  = 
-  begin
-    basis (cmap x) +v wordParikh cmap (u ++l v)
-  ≡⟨ cong (λ y → basis (cmap x) +v y) (wordParikhPlus cmap u v) ⟩ 
-    basis (cmap x) +v (wordParikh cmap u +v wordParikh cmap v) 
-  ≡⟨ sym vAssoc ⟩ 
-    ((basis (cmap x) +v wordParikh cmap u) +v wordParikh cmap v ∎)
-    where
-      _++l_ = Data.List._++_
-  
   
 
 

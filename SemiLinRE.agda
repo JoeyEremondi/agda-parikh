@@ -44,6 +44,52 @@ open import Data.Nat.Properties.Simple
 module VecNatEq = Data.Vec.Equality.DecidableEquality (Relation.Binary.PropositionalEquality.decSetoid Data.Nat._≟_)
 
 
+--Find the Parikh vector of a given word
+--Here cmap is the mapping of each character to its position
+--in the Parikh vector
+wordParikh : {n : ℕ} -> (Char -> Fin.Fin n) -> (w : List Char) -> Parikh n
+wordParikh cmap [] = v0
+wordParikh cmap (x ∷ w) = (basis (cmap x)) +v (wordParikh cmap w)
+
+--Show that the Parikh of concatenating two words
+--Is the sum of their Parikhs
+wordParikhPlus : {n : ℕ} 
+  -> (cmap : Char -> Fin.Fin n) 
+  -> (u : List Char) 
+  -> (v : List Char)
+  -> wordParikh cmap (u Data.List.++ v) ≡ (wordParikh cmap u) +v (wordParikh cmap v)
+wordParikhPlus cmap [] v = sym v0identLeft
+wordParikhPlus {n} cmap (x ∷ u) v  = 
+  begin
+    basis (cmap x) +v wordParikh cmap (u ++l v)
+  ≡⟨ cong (λ y → basis (cmap x) +v y) (wordParikhPlus cmap u v) ⟩ 
+    basis (cmap x) +v (wordParikh cmap u +v wordParikh cmap v) 
+  ≡⟨ sym vAssoc ⟩ 
+    ((basis (cmap x) +v wordParikh cmap u) +v wordParikh cmap v ∎)
+    where
+      _++l_ = Data.List._++_
+  
+
+
+--The algorithm mapping regular expressions to the Parikh set of
+--the language matched by the RE
+--We prove this correct below
+reSemiLin : {n : ℕ} {null? : RETypes.Null?} -> (Char -> Fin.Fin n) -> RETypes.RE null? -> SemiLinSet n 
+reSemiLin cmap RETypes.ε = Data.List.[ v0 , 0 , [] ]
+reSemiLin cmap RETypes.∅ = []
+reSemiLin cmap (RETypes.Lit x) = Data.List.[ basis (cmap x ) , 0 , [] ]
+reSemiLin cmap (r1 RETypes.+ r2) = reSemiLin cmap r1 Data.List.++ reSemiLin cmap r2
+reSemiLin cmap (r1 RETypes.· r2) = reSemiLin cmap r1 +s reSemiLin cmap r2
+reSemiLin cmap (r RETypes.*)  = starSemiLin (reSemiLin cmap r)
+
+
+
+{-
+Show that s* ⊆ s +v s*
+Not implemented due to time restrictions,
+but should be possible, given that linStarExtend is implemented
+in SemiLin.agda
+-}
 starExtend 
   :  {n : ℕ}
   -> (v1 v2 : Parikh n )
@@ -54,7 +100,15 @@ starExtend
   -> InSemiLin (v1 +v v2) (starSemiLin s)
 starExtend v1 v2 s ss spf inS inSS = {!!}
 
+{-
+Show that s* ⊇ s +v s*
+Not completely implemented due to time restrictions,
+but should be possible, given that linStarDecomp is implemented
+in SemiLin.agda.
 
+There are also some hard parts, for example, dealing with the proofs
+that the returned vectors are non-zero (otherwise, we'd just trivially return v0 and v)
+-}
 starDecomp
  :  {n : ℕ}
  -> (v : Parikh n)
@@ -74,23 +128,6 @@ starDecomp v sh [] .(sh ∷ []) .((v0 , 0 , []) ∷ (proj₁ sh , suc (proj₁ (
 starDecomp v sh (x ∷ st) .(sh ∷ x ∷ st) .((v0 , 0 , []) ∷ (proj₁ x +v proj₁ (starSum sh st) , suc (proj₁ (proj₂ x) + proj₁ (proj₂ (starSum sh st))) , proj₁ x ∷ proj₂ (proj₂ x) Data.Vec.++ proj₂ (proj₂ (starSum sh st))) ∷ []) vnz refl refl (InTail .v .(v0 , 0 , []) .((proj₁ x +v proj₁ (starSum sh st) , suc (proj₁ (proj₂ x) + proj₁ (proj₂ (starSum sh st))) , proj₁ x ∷ proj₂ (proj₂ x) Data.Vec.++ proj₂ (proj₂ (starSum sh st))) ∷ []) inSemi) = {!!} -}
 
 
-testPf : {n : ℕ} (sh : LinSet n) (su : SemiLinSet n) (sv : SemiLinSet n) -> (sh ∷ su ) +s sv ≡ (Data.List.map (λ x → sh +l x) sv ) Data.List.++ (su +s sv)
-testPf sh su sv = refl
-{-
-  begin 
-    (sh ∷ su) +s sv 
-    ≡⟨ refl ⟩ 
-    Data.List.concat
-      (Data.List.map (λ l1 → Data.List.map (λ l2 → l1 +l l2) sv)
-       (sh ∷ su)) 
-    ≡⟨ refl ⟩ 
-    Data.List.concat (Data.List.map (λ l2 → sh +l l2) sv ∷ Data.List.map (λ l1 → Data.List.map (λ l2 → l1 +l l2) sv) su) 
-    ≡⟨ refl ⟩
-    Data.List.map (λ l2 → sh +l l2) sv Data.List.++ Data.List.concat (Data.List.map (λ l1 → Data.List.map (λ l2 → l1 +l l2) sv) su) 
-    ≡⟨ refl ⟩ 
-    Data.List.map (λ l2 → sh +l l2) sv Data.List.++ su +s sv 
-    ∎ -}
-
 
 
 --Stolen from the stdlib
@@ -99,7 +136,11 @@ listIdentity [] = refl
 listIdentity (x ∷ xs) = cong (_∷_ x) (listIdentity xs)
 
 
--- ? ≡⟨ ? ⟩ ?
+{-
+Show that +s is actually the sum of two sets, that is,
+if v1 is in S1, and v2 is in S2, then v1 +v v2
+is in S1 +s S2
+-}
 sumPreserved : 
   {n : ℕ} 
   -> (u : Parikh n) 
@@ -146,81 +187,64 @@ sumPreserved u v .(sh ∷ st) sv (InTail .u sh st uIn) vIn =
   (slConcatLeft (u +v v) (st +s sv) (sumPreserved u v st sv uIn vIn) (Data.List.map (λ x → sh +l x) sv)) 
 
 
---The algorithm mapping regular expressions to the Parikh set of
---the language matched by the RE
---We prove this correct below
-reSemiLin : {n : ℕ} {null? : RETypes.Null?} -> (Char -> Fin.Fin n) -> RETypes.RE null? -> SemiLinSet n 
-reSemiLin cmap RETypes.ε = Data.List.[ v0 , 0 , [] ]
-reSemiLin cmap RETypes.∅ = []
-reSemiLin cmap (RETypes.Lit x) = Data.List.[ basis (cmap x ) , 0 , [] ]
-reSemiLin cmap (r1 RETypes.+ r2) = reSemiLin cmap r1 Data.List.++ reSemiLin cmap r2
-reSemiLin cmap (r1 RETypes.· r2) = reSemiLin cmap r1 +s reSemiLin cmap r2
-reSemiLin cmap (r RETypes.*)  = starSemiLin (reSemiLin cmap r)
-
-
-{-
---Used in the proof for star
---Given a semilinear set for r, and the semilinear set for r *,
---And a proof that a word's parikh is in the semilin for r
---Find a proof that the word's parikh is in the semilin for r* 
-findConstMultMatch : {n : ℕ}
-      -> (par : Parikh n )
-      -> (sub : SemiLinSet n) 
-      -> (top : LinSet n) 
-      ->  (top ≡ concatLinSets sub )
-      -> (proj₁ (proj₂ top ) ) ≡ Data.List.sum (Data.List.map (λ x -> suc (proj₁ (proj₂ x ) ) ) sub)
-      -> InSemiLin par sub
-      -> LinComb par top 
---findConstMultMatch par (sh ∷ st) (_ , 0 , []) () _
-findConstMultMatch {n} par .(sh ∷ st) (tbase , tm ,  tVecs) mapPf sumPf (InHead .par sh st linComb) = 
-  let
-    (subCoeffs , subPf ) = linComb
-    (sbase , sm , svec) = sh
-    (_ , m2 , subVecs) = concatLinSets st
-
-    tVecLength : tm ≡ (suc (sm) ) + m2
-    tVecLength = cong (proj₁ ∘ proj₂) mapPf
-
-    newTVecs : Vec (Parikh n) ((suc (sm) ) + m2)
-    newTVecs = subst (Vec (Parikh n)) tVecLength tVecs
-
-    newMapPf : ((tbase , tm ,  tVecs) ≡ concatLinSets (sh ∷ st) )
-    newMapPf = mapPf
-    
-    currentTVecs : Vec (Parikh n) (suc (sm) )
-    currentTVecs = Data.Vec.take (suc sm) newTVecs
-
-    --takeEq : Data.Vec.take (suc sm) (sbase ∷ svec) ≡ (sbase ∷ svec)
-    --takeEq = ?
-
-    --startSame : currentTVecs ≡ sbase ∷ svec
-    --startSame = cong (λ x → {!!}) newMapPf
-
-  in {!!}
-findConstMultMatch par .(sh ∷ st) (_ , tm , tVecs) mapPf sumPf (InTail .par sh st inHead) = {!!}
--}
-
-
+--A useful lemma, avoids having to dig into the List monoid instance
 rightCons : {A : Set} -> (l : List A) -> (l Data.List.++ [] ≡ l)
 rightCons [] = refl
 rightCons (x ∷ l) rewrite rightCons l = refl
 
-{-
-rSubsetStar : (r : RETypes.RE RETypes.NonNull) -> (s : List Char) -> RETypes.REMatch s r -> RETypes.REMatch s (r RETypes.*)
-rSubsetStar RETypes.∅ [] ()
-rSubsetStar (RETypes.Lit x) [] ()
-rSubsetStar (r RETypes.+ r₁) [] (RETypes.LeftPlusMatch .r₁ match) = RETypes.EmptyStarMatch
-rSubsetStar (r RETypes.+ r₁) [] (RETypes.RightPlusMatch .r match) = RETypes.EmptyStarMatch
-rSubsetStar (r RETypes.· r₁) [] match = []
-rSubsetStar r (x ∷ s) match = RETypes.StarMatch match RETypes.EmptyStarMatch --RETypes.StarMatch {!!} RETypes.EmptyStarMatch 
--}
+
+
 
 {-
-unpackStarSemi : {n : ℕ} -> {r : RETypes.RE RETypes.NonNull} -> (cmap : Char -> Fin.Fin n) -> (v : Parikh n) -> InSemiLin v (reSemiLin cmap (r RETypes.*)) -> LinComb v (starSemiLin (reSemiLin cmap r) )
-unpackStarSemi cmap v (InHead .v ._ .[] lcomb) = lcomb
-unpackStarSemi cmap v (InTail .v ._ .[] ()) 
+Show that, if a vector is in the union of two semi-linear sets,
+then it must be in one of those sets.
+Used in the proof for Union.
+Called concat because we represent semi-linear sets as lists,
+so union is just concatenating two semi-linear sets
 -}
+decomposeConcat 
+  :  {n : ℕ} 
+  -> (v : Parikh n) 
+  -> (s1 s2 s3 : SemiLinSet n) 
+  -> (s3 ≡ s1 Data.List.++ s2 ) 
+  -> InSemiLin v s3 
+  -> InSemiLin v s1 ⊎ InSemiLin v s2
+decomposeConcat v [] s2 .s2 refl inSemi = inj₂ inSemi
+decomposeConcat v (x ∷ s1) s2 .(x ∷ s1 Data.List.++ s2) refl (InHead .v .x .(s1 Data.List.++ s2) x₁) = inj₁ (InHead v x s1 x₁)
+decomposeConcat v (x ∷ s1) s2 .(x ∷ s1 Data.List.++ s2) refl (InTail .v .x .(s1 Data.List.++ s2) inSemi) with decomposeConcat v s1 s2 _ refl inSemi
+decomposeConcat v (x₁ ∷ s1) s2 .(x₁ ∷ s1 Data.List.++ s2) refl (InTail .v .x₁ .(s1 Data.List.++ s2) inSemi) | inj₁ x = inj₁ (InTail v x₁ s1 x)
+decomposeConcat v (x ∷ s1) s2 .(x ∷ s1 Data.List.++ s2) refl (InTail .v .x .(s1 Data.List.++ s2) inSemi) | inj₂ y = inj₂ y
 
+concatEq : {n : ℕ} -> (l : LinSet n) -> (s : SemiLinSet n) -> (l ∷ []) +s s ≡ (Data.List.map (_+l_ l) s)
+concatEq l [] = refl
+concatEq l (x ∷ s) rewrite concatEq l s | listIdentity (l ∷ [])  = refl 
+
+
+{-
+Show that if v is in l1 +l l2, then v = v1 +v v2 for some
+v1 in l1 and v2 in l2.
+This is the other half of the correcness proof of our sum functions, +l and +s
+-}
+decomposeLin
+  :  {n : ℕ} 
+  -> (v : Parikh n) 
+  -> (l1 l2 l3 : LinSet n) 
+  -> (l3 ≡ l1 +l l2 ) 
+  -> LinComb v l3 
+  -> ∃ λ v1 → ∃ λ v2 -> (v1 +v v2 ≡ v) × (LinComb v1 l1) × (LinComb v2 l2 )
+decomposeLin .(applyLinComb (b1 +v b2) (m1 + m2) (vecs1 Data.Vec.++ vecs2) coeffs) (b1 , m1 , vecs1) (b2 , m2 , vecs2) .(b1 +v b2 , m1 + m2 , vecs1 Data.Vec.++ vecs2) refl (coeffs , refl) with Data.Vec.splitAt m1 coeffs 
+decomposeLin .(applyLinComb (b1 +v b2) (m1 + m2) (vecs1 Data.Vec.++ vecs2) (coeffs1 Data.Vec.++ coeffs2)) (b1 , m1 , vecs1) (b2 , m2 , vecs2) .(b1 +v b2 , m1 + m2 , vecs1 Data.Vec.++ vecs2) refl (.(coeffs1 Data.Vec.++ coeffs2) , refl) | coeffs1 , coeffs2 , refl rewrite combSplit b1 b2 m1 m2 vecs1 vecs2 coeffs1 coeffs2 
+  = applyLinComb b1 m1 vecs1 coeffs1 , (applyLinComb b2 m2 vecs2 coeffs2 , (refl , ((coeffs1 , refl) , (coeffs2 , refl))))
+
+
+
+
+{-
+Show that our Parikh function is a superset of the actual Parikh image of a Regular Expression.
+
+We do this by showing that, for every word matching an RE, its Parikh vector
+is in the Parikh Image of the RE
+-}
 reParikhCorrect : 
   {n : ℕ} 
   -> {null? : RETypes.Null?} 
@@ -272,36 +296,12 @@ reParikhCorrect cmap (r RETypes.*) .(s1 Data.List.++ s2 ) (RETypes.StarMatch {s1
   starExtend (wordParikh cmap s1) (wordParikh cmap s2) (reSemiLin cmap r) _ refl (reParikhCorrect cmap r s1 m1 (wordParikh cmap s1) refl (reSemiLin cmap r) refl) (reParikhCorrect cmap (r RETypes.*) s2 m2 (wordParikh cmap s2) refl (starSemiLin (reSemiLin cmap r)) refl) 
 
 
-decomposeLin
-  :  {n : ℕ} 
-  -> (v : Parikh n) 
-  -> (l1 l2 l3 : LinSet n) 
-  -> (l3 ≡ l1 +l l2 ) 
-  -> LinComb v l3 
-  -> ∃ λ v1 → ∃ λ v2 -> (v1 +v v2 ≡ v) × (LinComb v1 l1) × (LinComb v2 l2 )
-decomposeLin .(applyLinComb (b1 +v b2) (m1 + m2) (vecs1 Data.Vec.++ vecs2) coeffs) (b1 , m1 , vecs1) (b2 , m2 , vecs2) .(b1 +v b2 , m1 + m2 , vecs1 Data.Vec.++ vecs2) refl (coeffs , refl) with Data.Vec.splitAt m1 coeffs 
-decomposeLin .(applyLinComb (b1 +v b2) (m1 + m2) (vecs1 Data.Vec.++ vecs2) (coeffs1 Data.Vec.++ coeffs2)) (b1 , m1 , vecs1) (b2 , m2 , vecs2) .(b1 +v b2 , m1 + m2 , vecs1 Data.Vec.++ vecs2) refl (.(coeffs1 Data.Vec.++ coeffs2) , refl) | coeffs1 , coeffs2 , refl rewrite combSplit b1 b2 m1 m2 vecs1 vecs2 coeffs1 coeffs2 
-  = applyLinComb b1 m1 vecs1 coeffs1 , (applyLinComb b2 m2 vecs2 coeffs2 , (refl , ((coeffs1 , refl) , (coeffs2 , refl))))
 
---If a vector is in the union of two semi-linear sets, it must be inside on of them
-decomposeConcat 
-  :  {n : ℕ} 
-  -> (v : Parikh n) 
-  -> (s1 s2 s3 : SemiLinSet n) 
-  -> (s3 ≡ s1 Data.List.++ s2 ) 
-  -> InSemiLin v s3 
-  -> InSemiLin v s1 ⊎ InSemiLin v s2
-decomposeConcat v [] s2 .s2 refl inSemi = inj₂ inSemi
-decomposeConcat v (x ∷ s1) s2 .(x ∷ s1 Data.List.++ s2) refl (InHead .v .x .(s1 Data.List.++ s2) x₁) = inj₁ (InHead v x s1 x₁)
-decomposeConcat v (x ∷ s1) s2 .(x ∷ s1 Data.List.++ s2) refl (InTail .v .x .(s1 Data.List.++ s2) inSemi) with decomposeConcat v s1 s2 _ refl inSemi
-decomposeConcat v (x₁ ∷ s1) s2 .(x₁ ∷ s1 Data.List.++ s2) refl (InTail .v .x₁ .(s1 Data.List.++ s2) inSemi) | inj₁ x = inj₁ (InTail v x₁ s1 x)
-decomposeConcat v (x ∷ s1) s2 .(x ∷ s1 Data.List.++ s2) refl (InTail .v .x .(s1 Data.List.++ s2) inSemi) | inj₂ y = inj₂ y
-
-concatEq : {n : ℕ} -> (l : LinSet n) -> (s : SemiLinSet n) -> (l ∷ []) +s s ≡ (Data.List.map (_+l_ l) s)
-concatEq l [] = refl
-concatEq l (x ∷ s) rewrite concatEq l s | listIdentity (l ∷ [])  = refl 
-
-
+{-
+Show that if v is in s1 +s s2, then v = v1 +v v2 for some
+v1 in s1 and v2 in s2.
+This is the other half of the correcness proof of our sum functions, +l and +s
+-}
 decomposeSum 
   :  {n : ℕ} 
   -> (v : Parikh n) 
@@ -332,54 +332,20 @@ decomposeSum v ((b1 , m1 , vecs1) ∷ s1) ((b2 , m2 , vecs2) ∷ s2) .((b1 , m1 
    subCall1 = decomposeSum v s1 ((b2 , m2 , vecs2) ∷ s2) _ refl inSub 
    v1 , v2 , pf , xIn , yIn = subCall1
  in v1 , v2 , pf , slExtend v1 s1 xIn (b1 , m1 , vecs1) , yIn
-{- 
-  let
-    test : InSemiLin v
-             (Data.List.map (_+l_ (b1 , m1 , vecs1)) s2 Data.List.++
-              Data.List.foldr Data.List._++_ []
-              (Data.List.map
-               (λ z → z +l (b2 , m2 , vecs2) ∷ Data.List.map (_+l_ z) s2) s1))
-    test = inSemi
-  in {!!} -}
+
+
+
+
+
 {-
-test : InSemiLin v
-             (Data.List.map (_+l_ (b1 , m1 , vecs1)) s2 Data.List.++
-              Data.List.foldr Data.List._++_ []
-              (Data.List.map
-               (λ z → z +l (b2 , m2 , vecs2) ∷ Data.List.map (_+l_ z) s2) s1))
-    test = inSemi
+Show that the generated Parikh image is a subset of the actual Parikh image.
+
+We do this by showing that, for every vector in the generated Parikh image,
+there's some word matched by the RE whose Parikh vector is that vector.
 -}
-
-
---Useful function for splitting semi-linear sets
---Used for union below
-
-inSemiConcat : 
-  {n : ℕ} 
-  -> (v : Parikh n) 
-  -> (sl1 : SemiLinSet n) 
-  -> (sl2 : SemiLinSet n) 
-  -> (sl3 : SemiLinSet n)
-  -> (sl1 Data.List.++ sl2) ≡ sl3
-  ->  InSemiLin v sl3 
-  -> (InSemiLin v sl1) ⊎ (InSemiLin v sl2)
-inSemiConcat v [] sl2 sl3 spf inSemi = 
-  let
-    eqPf : sl2 ≡ sl3
-    eqPf = spf
-  in inj₂ (subst (InSemiLin v) (sym eqPf) inSemi)
-inSemiConcat v (x ∷ sl1) sl2 .(sh ∷ st) spf (InHead .v sh st comb) = 
-  let
-    eqPf : x ≡ sh
-    eqPf = listHeadEq spf
-    newComb : LinComb v x
-    newComb = subst (LinComb v) (sym eqPf) comb
-  in inj₁ (InHead v x sl1 newComb)
-inSemiConcat v (x ∷ sl1) sl2 .(sh ∷ st) spf (InTail .v sh st inSemi) with inSemiConcat v sl1 sl2 st (listTailEq spf) inSemi 
-... | inj₁ inSl1 = inj₁ (InTail v x sl1 inSl1)
-... | inj₂ inSl2 = inj₂ inSl2
-
-
+--We have to convince the compiler that this is terminating
+--Since I didn't have time to implement the proofs of non-zero vectors
+--Which show that we only recurse on strictly smaller vectors in the Star case
 {-# TERMINATING #-}
 reParikhComplete : {n : ℕ} -> {null? : RETypes.Null?}
   -> (cmap : Char -> Fin.Fin n)
@@ -402,7 +368,7 @@ reParikhComplete cmap (RETypes.Lit x) langParikh [] inSemi ()
 reParikhComplete cmap (RETypes.Lit x) .(basis (cmap x)) .((basis (cmap x) , 0 , []) ∷ []) refl (InHead .(basis (cmap x)) .(basis (cmap x) , 0 , []) .[] (consts , refl)) = (x ∷ []) , (sym v0identRight , RETypes.LitMatch x)
 reParikhComplete cmap (RETypes.Lit x) v .((basis (cmap x) , 0 , []) ∷ []) refl (InTail .v .(basis (cmap x) , 0 , []) .[] ())
 --reParikhComplete cmap (RETypes.Lit x) v .((basis (cmap x) , 0 , []) ∷ []) refl (InTail .v .(basis (cmap x) , 0 , []) .[] ())
-reParikhComplete {null? = null?} cmap  (r1 RETypes.+ r2) v langParikh lpf inSemi with inSemiConcat v (reSemiLin cmap r1) (reSemiLin cmap r2) langParikh (sym (trans lpf refl)) inSemi
+reParikhComplete {null? = null?} cmap  (r1 RETypes.+ r2) v langParikh lpf inSemi with decomposeConcat v (reSemiLin cmap r1) (reSemiLin cmap r2) langParikh lpf inSemi
 ... | inj₁ in1 =  
   let
     (subw , subPf , subMatch) = reParikhComplete cmap  r1 v (reSemiLin cmap r1) refl in1
@@ -423,6 +389,9 @@ reParikhComplete cmap (r RETypes.*) v .((v0 , 0 , []) ∷ []) refl (InHead .v .(
 reParikhComplete cmap (r RETypes.*) v .((v0 , 0 , []) ∷ []) refl (InTail .v .(v0 , 0 , []) .[] ()) | []
 reParikhComplete cmap (r RETypes.*) v .((v0 , 0 , []) ∷ starSum x rsl ∷ []) refl inSemi | x ∷ rsl = 
   let
+    --The first hole is the non-zero proofs that I couldn't work out
+    --I'm not totally sure about the second, but I think I just need to apply some associativity to inSemi to get it to fit
+    --into the second hole. 
     splitVec = starDecomp v (reSemiLin cmap r) _ {!!} refl {!!}
     v1 , v2 , vpf , inS , inSS , _ = splitVec
     subCall1 = reParikhComplete cmap r v1 _ refl inS
